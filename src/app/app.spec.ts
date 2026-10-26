@@ -123,15 +123,20 @@ describe('App', () => {
     expect(producers).toHaveLength(1);
   });
 
-  it('explains on every page why the producer stopped', async () => {
-    const { element, settle, producers } = await boot('/settings');
+  it('explains on every page why the producer stopped and how to recover there', async () => {
+    const { element, navigate, settle, producers } = await boot('/settings');
+    const alert = () => element.querySelector('main [role="alert"]')?.textContent.trim();
 
-    producers[0].events.next({ type: 'failed', runId: 1, message: 'The worker could not run.' });
+    producers[0].events.next({
+      type: 'failed',
+      runId: 1,
+      message: 'The producer could not start.',
+    });
     await settle();
+    expect(alert()).toBe('The producer could not start. Apply settings to try again.');
 
-    expect(element.querySelector('main [role="alert"]')?.textContent.trim()).toBe(
-      'The worker could not run. Restart the producer from the dashboard, or apply settings, to try again.',
-    );
+    await navigate('/');
+    expect(alert()).toBe('The producer could not start. Restart the producer to try again.');
   });
 
   it('identifies a local build in the footer', async () => {

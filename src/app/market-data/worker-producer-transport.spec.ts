@@ -69,7 +69,7 @@ describe('createWorkerProducerTransport', () => {
         type: 'failed',
         runId: null,
         message:
-          'The market data worker could not run. If the app was just updated, reload the page.',
+          'The producer could not start. If the app was updated after this page was opened, reload the page.',
       },
     ]);
   });
@@ -83,7 +83,7 @@ describe('createWorkerProducerTransport', () => {
       {
         type: 'failed',
         runId: null,
-        message: 'A message from the market data worker could not be read.',
+        message: 'A message from the producer could not be read.',
       },
     ]);
   });
@@ -100,7 +100,7 @@ describe('createWorkerProducerTransport', () => {
     vi.stubGlobal('Worker', undefined);
 
     expect(() => createWorkerProducerTransport()).toThrow(
-      'This browser cannot run the market data producer: it needs Web Workers and WebAssembly.',
+      'This browser cannot run the producer: it needs Web Workers and WebAssembly.',
     );
   });
 });

@@ -78,7 +78,7 @@ describe('ProducerControls', () => {
     events.next({
       type: 'failed',
       runId: 1,
-      message: 'The market generator stopped unexpectedly.',
+      message: 'The producer stopped unexpectedly.',
     });
     await settle();
     expect(button()?.textContent.trim()).toBe('Restart producer');

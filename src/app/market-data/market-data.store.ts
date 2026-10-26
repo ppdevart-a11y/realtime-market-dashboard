@@ -205,7 +205,7 @@ export class MarketDataStore {
           map((): ProducerEvent => ({
             type: 'failed',
             runId: run.id,
-            message: `The market data producer did not respond within ${PRODUCER_STARTUP_TIMEOUT_MS / 1_000} seconds.`,
+            message: `The producer did not respond within ${PRODUCER_STARTUP_TIMEOUT_MS / 1_000} seconds.`,
           })),
         );
         return merge(lifecycle$, snapshots$, startupTimeout$);

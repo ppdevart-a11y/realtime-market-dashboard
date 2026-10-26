@@ -64,13 +64,13 @@ describe('createProducerHost', () => {
     const cause = new Error('failed to fetch Wasm: 404');
 
     host.receive(start(1));
-    rejectSources(new Error('The market generator could not be loaded.', { cause }));
+    rejectSources(new Error('The producer could not load its market generator.', { cause }));
     await settle();
     host.receive(start(2));
 
     expect(posted).toEqual([
-      { type: 'failed', runId: 1, message: 'The market generator could not be loaded.' },
-      { type: 'failed', runId: 2, message: 'The market generator could not be loaded.' },
+      { type: 'failed', runId: 1, message: 'The producer could not load its market generator.' },
+      { type: 'failed', runId: 2, message: 'The producer could not load its market generator.' },
     ]);
     expect((logged[0] as Error).cause).toBe(cause);
   });
@@ -92,8 +92,8 @@ describe('createProducerHost', () => {
 
     expect(posted).toEqual([
       { type: 'started', runId: 1, seed: '7' },
-      { type: 'failed', runId: 1, message: 'The market generator stopped unexpectedly.' },
-      { type: 'failed', runId: 2, message: 'The market generator stopped unexpectedly.' },
+      { type: 'failed', runId: 1, message: 'The producer stopped unexpectedly.' },
+      { type: 'failed', runId: 2, message: 'The producer stopped unexpectedly.' },
     ]);
   });
 
@@ -109,7 +109,7 @@ describe('createProducerHost', () => {
       {
         type: 'failed',
         runId: null,
-        message: 'The market data producer received a malformed command.',
+        message: 'The producer received a command it could not read.',
       },
       { type: 'started', runId: 2, seed: '7' },
     ]);
@@ -129,7 +129,7 @@ describe('createProducerHost', () => {
     expect(posted.at(-1)).toEqual({
       type: 'failed',
       runId: 3,
-      message: 'The market data producer failed unexpectedly.',
+      message: 'The producer stopped unexpectedly.',
     });
     expect(logged).toEqual([escaped]);
   });

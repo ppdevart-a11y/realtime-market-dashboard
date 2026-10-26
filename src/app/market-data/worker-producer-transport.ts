@@ -17,9 +17,7 @@ function failure(message: string): ProducerEvent {
  */
 export function createWorkerProducerTransport(): ProducerTransport {
   if (typeof Worker === 'undefined' || typeof WebAssembly === 'undefined') {
-    throw new Error(
-      'This browser cannot run the market data producer: it needs Web Workers and WebAssembly.',
-    );
+    throw new Error('This browser cannot run the producer: it needs Web Workers and WebAssembly.');
   }
   const worker = new Worker(new URL('../producer/producer.worker', import.meta.url), {
     type: 'module',
@@ -31,12 +29,12 @@ export function createWorkerProducerTransport(): ProducerTransport {
       fromEvent(worker, 'error').pipe(
         map(() =>
           failure(
-            'The market data worker could not run. If the app was just updated, reload the page.',
+            'The producer could not start. If the app was updated after this page was opened, reload the page.',
           ),
         ),
       ),
       fromEvent(worker, 'messageerror').pipe(
-        map(() => failure('A message from the market data worker could not be read.')),
+        map(() => failure('A message from the producer could not be read.')),
       ),
     ),
     send: (command) => {

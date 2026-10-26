@@ -2,8 +2,8 @@ import { Component, computed, inject } from '@angular/core';
 import { MarketDataStore } from '../market-data/market-data.store';
 
 /**
- * Why the producer stopped, announced as an alert, followed by whatever the page offers to recover
- * (projected content). Pages place it next to their own recovery action.
+ * Why the producer stopped, announced as an alert, followed by how to recover on the page that
+ * shows it (projected content).
  */
 @Component({
   selector: 'app-producer-failure',

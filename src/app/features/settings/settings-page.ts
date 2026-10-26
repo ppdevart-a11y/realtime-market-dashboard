@@ -11,6 +11,7 @@ import {
   type SettingViolation,
   settingViolation,
 } from '../../domain/producer-settings';
+import { ProducerFailure } from '../../layout/producer-failure';
 import { MarketDataStore } from '../../market-data/market-data.store';
 import { NumberField } from './number-field';
 import { readNumberText } from './number-text';
@@ -110,7 +111,7 @@ function readSettings(draft: SettingsDraft): ProducerSettings | null {
  */
 @Component({
   selector: 'app-settings-page',
-  imports: [FormRoot, NumberField],
+  imports: [FormRoot, NumberField, ProducerFailure],
   templateUrl: './settings-page.html',
   styleUrl: './settings-page.scss',
 })

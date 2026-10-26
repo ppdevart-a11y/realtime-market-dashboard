@@ -222,7 +222,7 @@ describe('ProducerEngine', () => {
     scheduler.advanceBy(1_000);
 
     expect(events).toEqual([
-      { type: 'failed', runId: 1, message: 'The market generator stopped unexpectedly.' },
+      { type: 'failed', runId: 1, message: 'The producer stopped unexpectedly.' },
     ]);
     expect(errors).toEqual([new Error('instantiate failed')]);
   });
@@ -239,7 +239,7 @@ describe('ProducerEngine', () => {
     expect(events.at(-1)).toEqual({
       type: 'failed',
       runId: 1,
-      message: 'The market generator stopped unexpectedly.',
+      message: 'The producer stopped unexpectedly.',
     });
     expect(source.disposed).toBe(true);
     expect(source.batchSizes).toHaveLength(1);

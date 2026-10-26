@@ -153,7 +153,7 @@ export class ProducerEngine {
     this.#deps.emit({
       type: 'failed',
       runId,
-      message: 'The market generator stopped unexpectedly.',
+      message: 'The producer stopped unexpectedly.',
     });
   }
 

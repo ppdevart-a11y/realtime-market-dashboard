@@ -68,7 +68,7 @@ export function createProducerHost(deps: ProducerHostDependencies): ProducerHost
     try {
       engine.handle(command);
     } catch (error) {
-      fail(command.runId, 'The market data producer failed unexpectedly.', error);
+      fail(command.runId, 'The producer stopped unexpectedly.', error);
     }
   }
 
@@ -98,7 +98,7 @@ export function createProducerHost(deps: ProducerHostDependencies): ProducerHost
         deps.post({
           type: 'failed',
           runId: null,
-          message: 'The market data producer received a malformed command.',
+          message: 'The producer received a command it could not read.',
         });
         return;
       }
@@ -108,7 +108,7 @@ export function createProducerHost(deps: ProducerHostDependencies): ProducerHost
     fail(error) {
       // The worker may be in an inconsistent state: nothing it generates from here on is trusted.
       engine?.stop();
-      fail(latestRunId, 'The market data producer failed unexpectedly.', error);
+      fail(latestRunId, 'The producer stopped unexpectedly.', error);
     },
   };
 }

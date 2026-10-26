@@ -1,5 +1,6 @@
 <h1 tabindex="-1">Producer settings</h1>
 <p class="intro">Changes take effect only when you apply them.</p>
+<app-producer-failure>Apply settings to try again.</app-producer-failure>
 
 <form [formRoot]="settingsForm" (submit)="applySettings()">
   @for (field of fields; track field.key) {

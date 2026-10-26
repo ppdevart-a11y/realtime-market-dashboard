@@ -3,12 +3,11 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter, skip } from 'rxjs';
 import { buildSha } from './build-info';
-import { ProducerFailure } from './layout/producer-failure';
 import { ProducerStatusBadge } from './layout/producer-status-badge';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, ProducerFailure, ProducerStatusBadge],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, ProducerStatusBadge],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })

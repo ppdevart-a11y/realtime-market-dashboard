@@ -33,16 +33,14 @@ export async function loadWasmMarketSourceFactory(
     ({ memory } = await init({ module_or_path: module }));
   } catch (error) {
     // The cause carries the technical detail for the log; the message is what the user sees.
-    throw new Error('The market generator could not be loaded.', { cause: error });
+    throw new Error('The producer could not load its market generator.', { cause: error });
   }
   if (
     updateStrideWords() !== MARKET_UPDATE_WORDS ||
     maxBatchSize() !== PRODUCER_SETTINGS_LIMITS.updatesPerBatch.max ||
     maxInstrumentCount() !== PRODUCER_SETTINGS_LIMITS.instrumentCount.max
   ) {
-    throw new Error(
-      'The market generator does not match this version of the app. Reload the page.',
-    );
+    throw new Error('The producer does not match this version of the app. Reload the page.');
   }
 
   let words = new Uint32Array(memory.buffer);
