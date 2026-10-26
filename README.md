@@ -118,6 +118,9 @@ on its next navigation, which is exactly what happens when a change is pushed du
 
 ## Running locally
 
+The app targets current evergreen browsers, as Angular 22 does. It relies on module workers,
+WebAssembly and CSS `light-dark()` (Chrome and Edge 123+, Firefox 120+, Safari 17.5+).
+
 Prerequisites:
 
 - Node.js 24, from 24.15 (`.nvmrc` pins the exact version CI uses).
@@ -134,11 +137,12 @@ npm start        # builds the Wasm module, then serves http://localhost:4200
 ## Testing
 
 ```bash
-npm test           # TypeScript: unit, component, marble and Wasm contract tests (Vitest)
-npm run test:rust  # Rust: generator tests (cargo test)
-npm run verify     # every check CI runs: formatting, ESLint, Stylelint, rustfmt,
-                   # Clippy (native and wasm32), type-checking (app, specs and worker), all tests
-                   # and the production build
+npm test             # TypeScript: unit, component, marble and Wasm contract tests (Vitest)
+npm run test:rust    # Rust: generator tests (cargo test)
+npm run test:worker  # the Cloudflare Worker's routing (node:test)
+npm run verify       # every CI check but the dependency audit: formatting, ESLint, Stylelint,
+                     # rustfmt, Clippy (native and wasm32), type-checking (app, specs and
+                     # worker), all tests and the production build
 ```
 
 No test waits in real time: the engine runs on a manual clock, the store's timing is tested with
@@ -154,8 +158,8 @@ RxJS marble tests (animation frames included), and the components run zoneless.
 
 ## Deployment
 
-GitHub Actions runs on every push: a build job, a test job (type-checking, Vitest and the Rust
-tests) and a lint job (Prettier, ESLint, Stylelint, rustfmt and Clippy for native and wasm32).
+GitHub Actions runs on every push: a build job, a test job (type-checking, Vitest, the Rust
+tests and the Worker's routing tests) and a lint job (Prettier, ESLint, Stylelint, rustfmt and Clippy for native and wasm32).
 Once the build and the tests pass, the build is published to Cloudflare Workers static assets:
 `main` with `wrangler deploy`, any other branch as a version with a public preview at
 `https://b-<branch>-realtime-market-dashboard.ppdevart.workers.dev` (lowercase, non-alphanumerics
@@ -183,13 +187,17 @@ Measured on the production build at the maximum settings (50 instruments, 1,000 
 | Long tasks on the main thread | none                                                            |
 | Frames                        | the page kept the display's 120 Hz refresh; slowest frame 11 ms |
 | JavaScript heap (main thread) | 6 MB                                                            |
-| Generator                     | about 25 µs per 1,000-update batch in Wasm                      |
+| Generator                     | about 25 µs per 1,000-update batch (Wasm, measured in Node 24)  |
 
 Payloads, gzipped: application 104 KB, worker 3.4 KB, Wasm module 9.7 KB, styles 1.1 KB. The
 variable font adds 34 KB of WOFF2 for Latin text (Latin Extended, 19 KB, loads only when needed).
 
 ## Trade-offs and known limits
 
+- Generation continues while the tab is hidden; only rendering stops (no animation frames), and
+  the next visible frame shows the up-to-date totals.
+- At very low rates with many instruments (say 50 instruments, one update every 2 s), a rarely
+  traded instrument shows unavailable values until its first trade, as the specification asks.
 - Pause and resume update the UI immediately rather than waiting for the worker to confirm.
   Commands are delivered in order, and the only way one could be lost is the worker dying, which
   is reported as an error.

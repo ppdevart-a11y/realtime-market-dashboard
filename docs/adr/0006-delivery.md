@@ -47,7 +47,7 @@ reviewable on its own URL.
 - **GitHub Pages.** It served HTML with `max-age=600` when checked, so a push could take ten
   minutes to appear. It has no per-branch previews and no real SPA fallback.
 - **A host's own Git integration** (Cloudflare Pages, Vercel, Netlify). Each host's build image
-  would need rustup and wasm-pack, and the deploy would not wait for the Rust job.
+  would need rustup and wasm-pack, and the deploy would not wait for the test job.
 - **Gating deploys on the audit.** Safer in a product; for a demo whose production dependencies
   are mostly the framework, it would turn someone else's advisory into a frozen demo.
 - **Gating deploys on every check, lint included.** The usual choice, and the first version of
