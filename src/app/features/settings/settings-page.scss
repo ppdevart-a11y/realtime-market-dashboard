@@ -35,33 +35,6 @@ form {
   gap: var(--space-3) var(--space-4);
 }
 
-button {
-  padding: var(--space-2) var(--space-4);
-  border: 1px solid transparent;
-  border-radius: var(--radius-control);
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.primary {
-  background: var(--color-action);
-  color: var(--color-on-action);
-}
-
-.primary:hover {
-  background: color-mix(in oklab, var(--color-action) 82%, var(--color-canvas));
-}
-
-.secondary {
-  border-color: var(--color-control-border);
-  background: var(--color-surface);
-  color: var(--color-ink);
-}
-
-.secondary:hover {
-  background: var(--color-canvas);
-}
-
 .unsaved,
 .help {
   font-size: var(--text-sm);
