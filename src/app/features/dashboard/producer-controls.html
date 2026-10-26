@@ -1,0 +1,29 @@
+<dl class="facts">
+  <div>
+    <dt>Run</dt>
+    <dd>{{ store.runId() }}</dd>
+  </div>
+  <div>
+    <dt>Instruments</dt>
+    <dd>{{ store.settings().instrumentCount }}</dd>
+  </div>
+  <div>
+    <dt>Nominal rate</dt>
+    <dd>{{ nominalRate() | number }} updates/s</dd>
+  </div>
+  <div>
+    <dt>Updates this run</dt>
+    <dd>{{ store.totalUpdates() | number }}</dd>
+  </div>
+</dl>
+
+@if (failure(); as message) {
+  <div class="failure" role="alert">
+    <p>{{ message }}</p>
+    <button type="button" class="action" (click)="store.retry()">Restart producer</button>
+  </div>
+} @else {
+  <button type="button" class="action" (click)="togglePause()">
+    {{ paused() ? 'Resume' : 'Pause' }}
+  </button>
+}
