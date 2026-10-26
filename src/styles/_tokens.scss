@@ -16,6 +16,11 @@
   --color-on-action: light-dark(#fff, #0f1720);
   --color-action: var(--color-ink);
 
+  // Outlines of form controls. WCAG 1.4.11 asks 3:1 against adjacent colours, which --color-line
+  // (1.35:1) is too faint for: this is 3.9:1 on surface and 3.6:1 on canvas in light, 4.0:1 and
+  // 4.5:1 in dark.
+  --color-control-border: light-dark(#758392, #6e8095);
+
   // Atkinson Hyperlegible Next separates 0/O, 1/l/I and 5/S, the confusions that matter when
   // reading prices; tabular figures keep columns aligned while values change.
   --font-sans: 'Atkinson Hyperlegible Next Variable', system-ui, sans-serif;
