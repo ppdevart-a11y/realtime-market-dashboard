@@ -340,6 +340,52 @@ describe('MarketDataStore', () => {
       });
     });
 
+    it('clears the previous run from the screen as soon as settings are applied', () => {
+      testScheduler.run(({ hot, cold, animate }) => {
+        const events = hot<ProducerEvent>('-sa', { s: started(1), a: snapshot(1, 7) });
+        animate('---x');
+        const { store } = setup(events);
+        const seen: { total: number; volumes: number[]; prices: (number | null)[] }[] = [];
+        const observe = () =>
+          seen.push({
+            total: store.totalUpdates(),
+            volumes: store.instruments().map((row) => row.volume),
+            prices: store.instruments().map((row) => row.lastPriceCents),
+          });
+
+        store.start();
+        cold('----x').subscribe(() => {
+          observe();
+          store.apply(smallRun);
+          observe();
+        });
+
+        testScheduler.flush();
+        expect(seen).toEqual([
+          { total: 7, volumes: [7, 7, 7, 7, 7], prices: Array<number>(5).fill(10_000) },
+          { total: 0, volumes: [0, 0], prices: [null, null] },
+        ]);
+      });
+    });
+
+    it('recovers by itself when a producer that timed out confirms the run after all', () => {
+      testScheduler.run(({ hot, cold }) => {
+        const events = hot<ProducerEvent>(`${PRODUCER_STARTUP_TIMEOUT_MS + 1_000}ms s`, {
+          s: started(1),
+        });
+        const { store } = setup(events);
+        const statuses: string[] = [];
+
+        store.start();
+        cold(`${PRODUCER_STARTUP_TIMEOUT_MS + 1}ms a 1000ms b`).subscribe(() =>
+          statuses.push(store.status().kind),
+        );
+
+        testScheduler.flush();
+        expect(statuses).toEqual(['error', 'running']);
+      });
+    });
+
     it('fails a run whose producer never confirms it', () => {
       testScheduler.run(({ cold }) => {
         const { store } = setup();

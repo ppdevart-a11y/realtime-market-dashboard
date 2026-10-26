@@ -198,6 +198,8 @@ export class MarketDataStore {
           filter((event) => event.type === 'snapshot'),
           auditTime(0, animationFrameScheduler),
         );
+        // A producer that confirms after the timeout still takes the run over, so a slow network
+        // recovers by itself instead of demanding a restart.
         const startupTimeout$ = timer(PRODUCER_STARTUP_TIMEOUT_MS).pipe(
           takeUntil(lifecycle$),
           map((): ProducerEvent => ({
