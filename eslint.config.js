@@ -46,6 +46,7 @@ module.exports = defineConfig([
       // Angular declares components, directives and pipes as decorated classes that may be empty.
       '@typescript-eslint/no-extraneous-class': ['error', { allowWithDecorator: true }],
       '@typescript-eslint/switch-exhaustiveness-check': 'error',
+      '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
     },
   },
   {
