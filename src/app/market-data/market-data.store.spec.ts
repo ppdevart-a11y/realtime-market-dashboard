@@ -220,6 +220,21 @@ describe('MarketDataStore', () => {
       expect(store.status()).toEqual({ kind: 'running' });
     });
 
+    it('restarts on a new producer even when the current one is healthy', () => {
+      const { store, transports, latest } = setup();
+      store.start();
+      const healthy = latest();
+      healthy.emit(started(1));
+
+      store.retry();
+
+      expect(healthy.disposed).toBe(true);
+      expect(transports).toHaveLength(2);
+      expect(latest().sent).toEqual([
+        { type: 'start', runId: 2, settings: DEFAULT_PRODUCER_SETTINGS },
+      ]);
+    });
+
     it('replaces a failed producer when new settings are applied', () => {
       const { store, transports, latest } = setup();
       store.start();

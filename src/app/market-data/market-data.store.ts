@@ -17,6 +17,7 @@ import { instrumentSymbols } from '../domain/instrument-symbols';
 import type { InstrumentSnapshot } from '../domain/market-aggregator';
 import type { ProducerEvent } from '../domain/producer-protocol';
 import { DEFAULT_PRODUCER_SETTINGS, type ProducerSettings } from '../domain/producer-settings';
+import { describeError } from '../shared/describe-error';
 import { PRODUCER_TRANSPORT_FACTORY, type ProducerTransport } from './producer-transport';
 
 /** How long a producer may take to confirm a run (loading Wasm included) before it is failed. */
@@ -140,9 +141,9 @@ export class MarketDataStore {
     this.#beginRun(settings);
   }
 
-  /** Starts a new run with the current settings on a fresh producer. */
+  /** Replaces the producer, whatever its state, and starts a new run with the current settings. */
   retry(): void {
-    this.#beginRun(this.#settings());
+    this.#beginRun(this.#settings(), { replaceProducer: true });
   }
 
   #request(state: 'running' | 'paused'): void {
@@ -154,8 +155,8 @@ export class MarketDataStore {
     transport.send({ type: state === 'paused' ? 'pause' : 'resume', runId: this.#runId() });
   }
 
-  #beginRun(settings: ProducerSettings): void {
-    const transport = this.#transportForNextRun();
+  #beginRun(settings: ProducerSettings, { replaceProducer = false } = {}): void {
+    const transport = this.#transportForNextRun(replaceProducer);
     if (transport === null) {
       return;
     }
@@ -170,9 +171,9 @@ export class MarketDataStore {
     transport.send({ type: 'start', runId: id, settings });
   }
 
-  /** The current producer, or a new one if there is none or the current one failed. */
-  #transportForNextRun(): ProducerTransport | null {
-    if (this.#transport !== null && this.#phase().kind !== 'error') {
+  /** The current producer, or a new one when asked for, when there is none or when it failed. */
+  #transportForNextRun(replace: boolean): ProducerTransport | null {
+    if (!replace && this.#transport !== null && this.#phase().kind !== 'error') {
       return this.#transport;
     }
     this.#transport?.dispose();
@@ -181,11 +182,7 @@ export class MarketDataStore {
       this.#transport = this.#createTransport();
       return this.#transport;
     } catch (error) {
-      this.#phase.set({
-        kind: 'error',
-        message:
-          error instanceof Error ? error.message : 'The market data producer could not be created.',
-      });
+      this.#phase.set({ kind: 'error', message: describeError(error) });
       return null;
     }
   }

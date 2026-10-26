@@ -1,6 +1,7 @@
 import { MarketAggregator } from '../domain/market-aggregator';
 import type { ProducerCommand, ProducerEvent } from '../domain/producer-protocol';
 import type { ProducerSettings } from '../domain/producer-settings';
+import { describeError } from '../shared/describe-error';
 import type { MarketSource, MarketSourceFactory } from './market-source';
 import type { Scheduler } from './scheduler';
 
@@ -150,11 +151,10 @@ export class ProducerEngine {
   #fail(runId: number, error: unknown): void {
     this.#stopped = true;
     this.#discardRun();
-    const reason = error instanceof Error ? error.message : String(error);
     this.#deps.emit({
       type: 'failed',
       runId,
-      message: `The market generator stopped unexpectedly: ${reason}`,
+      message: `The market generator stopped unexpectedly: ${describeError(error)}`,
     });
   }
 
