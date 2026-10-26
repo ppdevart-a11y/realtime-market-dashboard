@@ -1,0 +1,23 @@
+<h1 tabindex="-1">Producer settings</h1>
+<p class="intro">Changes take effect only when you apply them.</p>
+
+<form [formRoot]="settingsForm">
+  @for (field of fields; track field.key) {
+    <app-number-field [field]="settingsForm[field.key]" [label]="field.label" [hint]="field.hint" />
+  }
+
+  <p class="preview">{{ preview() }}</p>
+
+  <div class="submission">
+    <div class="actions">
+      <button type="submit" class="primary" aria-describedby="apply-help">Apply settings</button>
+      <button type="button" class="secondary" (click)="resetToDefaults()">Reset to defaults</button>
+      @if (hasUnsavedChanges()) {
+        <span class="unsaved">Unsaved changes</span>
+      }
+    </div>
+    <p class="help" id="apply-help">Starts a new run and clears current values.</p>
+  </div>
+</form>
+
+<p class="confirmation" role="status">{{ announcement() }}</p>

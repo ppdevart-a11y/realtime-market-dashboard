@@ -1,0 +1,76 @@
+// One narrow column: short labels and three-digit values read best close together.
+:host {
+  display: grid;
+  gap: var(--space-6);
+  max-inline-size: 32rem;
+}
+
+.intro,
+.help {
+  color: var(--color-ink-muted);
+}
+
+form {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.preview {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  font-variant-numeric: tabular-nums;
+}
+
+.submission {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-4);
+}
+
+button {
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primary {
+  background: var(--color-action);
+  color: var(--color-on-action);
+}
+
+.primary:hover {
+  background: color-mix(in oklab, var(--color-action) 82%, var(--color-canvas));
+}
+
+.secondary {
+  border-color: var(--color-control-border);
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
+
+.secondary:hover {
+  background: var(--color-canvas);
+}
+
+.unsaved,
+.help {
+  font-size: var(--text-sm);
+}
+
+.unsaved {
+  font-weight: 600;
+}
+
+.confirmation {
+  font-weight: 600;
+}
