@@ -1,13 +1,17 @@
 .scroller {
-  overflow-x: auto;
+  // Scrolls on both axes inside the panel, so the header stays in view over fifty rows.
+  max-block-size: max(18rem, 70dvb);
+  overflow: auto;
   border: 1px solid var(--color-line);
   border-radius: var(--radius-panel);
   background: var(--color-surface);
 }
 
+// Separate borders: with collapsed borders, sticky cells lose their rules while scrolling.
 table {
   inline-size: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-variant-numeric: tabular-nums;
 }
 
@@ -43,6 +47,7 @@ td {
 thead th {
   position: sticky;
   inset-block-start: 0;
+  z-index: 1;
   background: var(--color-surface);
   color: var(--color-ink-muted);
   font-size: var(--text-sm);
@@ -53,13 +58,19 @@ tbody tr:last-child > * {
   border-block-end: 0;
 }
 
-// The symbol column stays in view when the table scrolls sideways on narrow screens.
-tbody th {
+// The symbol column stays in view when the table scrolls sideways on narrow screens; its header
+// cell sticks on both axes and sits above the rest of the header.
+tbody th,
+thead th:first-child {
   position: sticky;
   inset-inline-start: 0;
   background: var(--color-surface);
   font-weight: 600;
   letter-spacing: 0.02em;
+}
+
+thead th:first-child {
+  z-index: 2;
 }
 
 .numeric {

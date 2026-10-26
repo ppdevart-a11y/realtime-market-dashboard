@@ -44,3 +44,7 @@ dd {
   font-weight: 600;
   cursor: pointer;
 }
+
+.action:hover {
+  background: color-mix(in oklab, var(--color-action) 82%, var(--color-canvas));
+}
