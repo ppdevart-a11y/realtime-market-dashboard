@@ -1,0 +1,11 @@
+# Angular fingerprints scripts, styles and media with content hashes, so they never change in place.
+# Everything else (index.html) keeps Cloudflare's default "max-age=0, must-revalidate", which is
+# what lets a push show up in the live demo immediately.
+/*.js
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.css
+  Cache-Control: public, max-age=31536000, immutable
+
+/media/*
+  Cache-Control: public, max-age=31536000, immutable

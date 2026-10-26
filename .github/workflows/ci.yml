@@ -1,0 +1,98 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    name: Web
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Per-job groups: a shared group would make sibling jobs of the same run cancel each other.
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-web
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: site
+          path: dist/realtime-market-dashboard/browser
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+
+  deploy:
+    name: Deploy
+    needs: [web]
+    # Pull requests from forks never receive secrets; every push (any branch) deploys.
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Deploys queue instead of cancelling so a half-finished upload never races a newer one.
+    concurrency:
+      group: deploy-${{ github.ref }}
+      cancel-in-progress: false
+    environment:
+      name: ${{ github.ref == 'refs/heads/main' && 'production' || 'preview' }}
+      url: ${{ steps.publish.outputs.url }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: site
+          path: dist/realtime-market-dashboard/browser
+
+      - name: Publish to Cloudflare
+        id: publish
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          WRANGLER_OUTPUT_FILE_PATH: ${{ runner.temp }}/wrangler-output.ndjson
+        run: |
+          set -euo pipefail
+          message="${GITHUB_SHA::7} ${GITHUB_REF_NAME}"
+          if [[ "$GITHUB_REF" == "refs/heads/main" ]]; then
+            npx wrangler deploy --message "$message"
+            url="$(jq -r 'select(.type == "deploy") | .targets[0]' "$WRANGLER_OUTPUT_FILE_PATH")"
+          else
+            # Preview aliases become a DNS label "<alias>-<worker>", capped at 63 characters, so the
+            # alias gets at most 63 - 1 - len("realtime-market-dashboard") = 37 lowercase characters.
+            slug="$(tr '[:upper:]' '[:lower:]' <<< "$GITHUB_REF_NAME" | sed -E 's/[^a-z0-9]+/-/g')"
+            alias="$(cut -c1-37 <<< "b-${slug}" | sed -E 's/-+$//')"
+            npx wrangler versions upload --preview-alias "$alias" --message "$message"
+            url="$(jq -r 'select(.type == "version-upload") | .preview_alias_url // .preview_url' "$WRANGLER_OUTPUT_FILE_PATH")"
+          fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Deployed \`${GITHUB_SHA::7}\` to $url" >> "$GITHUB_STEP_SUMMARY"
