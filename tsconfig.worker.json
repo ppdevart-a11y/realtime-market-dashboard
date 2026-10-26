@@ -1,0 +1,11 @@
+/* Workers are bundled by esbuild without type-checking, so they get their own program with the
+   WebWorker lib instead of DOM. Anything they import from src/app/domain is checked here too. */
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "WebWorker"],
+    "types": [],
+    "noEmit": true
+  },
+  "include": ["src/**/*.worker.ts"]
+}

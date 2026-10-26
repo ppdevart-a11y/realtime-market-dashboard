@@ -1,0 +1,6 @@
+/dist
+/coverage
+/.angular
+/wasm/**/pkg
+/wasm/**/target
+package-lock.json
