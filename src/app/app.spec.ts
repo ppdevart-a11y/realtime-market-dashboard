@@ -105,6 +105,35 @@ describe('App', () => {
     expect(document.activeElement?.textContent).toBe('Producer settings');
   });
 
+  it('leaves focus alone on the first load', async () => {
+    await boot('/');
+
+    expect(document.activeElement).toBe(document.body);
+  });
+
+  it('skips to the content without leaving the page, so the run survives', async () => {
+    const { element, producers } = await boot('/settings');
+    const skip = new MouseEvent('click', { bubbles: true, cancelable: true });
+
+    element.querySelector('.skip-link')?.dispatchEvent(skip);
+
+    expect(skip.defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(element.querySelector('main'));
+    expect(TestBed.inject(Router).url).toBe('/settings');
+    expect(producers).toHaveLength(1);
+  });
+
+  it('explains on every page why the producer stopped', async () => {
+    const { element, settle, producers } = await boot('/settings');
+
+    producers[0].events.next({ type: 'failed', runId: 1, message: 'The worker could not run.' });
+    await settle();
+
+    expect(element.querySelector('main [role="alert"]')?.textContent.trim()).toBe(
+      'The worker could not run. Restart the producer from the dashboard, or apply settings, to try again.',
+    );
+  });
+
   it('identifies a local build in the footer', async () => {
     const { element } = await boot('/');
 

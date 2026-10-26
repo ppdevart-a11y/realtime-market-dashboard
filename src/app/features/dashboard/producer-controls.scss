@@ -25,26 +25,7 @@ dd {
   font-weight: 600;
 }
 
-.failure {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-3) var(--space-4);
-  color: var(--color-danger);
-}
-
-// Fixed width so the label swap between Pause and Resume never shifts the layout.
-.action {
-  min-inline-size: 7rem;
-  padding: var(--space-2) var(--space-4);
-  border: 0;
-  border-radius: var(--radius-control);
-  background: var(--color-action);
-  color: var(--color-on-action);
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.action:hover {
-  background: color-mix(in oklab, var(--color-action) 82%, var(--color-canvas));
+// Wide enough for every label, so switching between them never shifts the layout.
+button {
+  min-inline-size: 10rem;
 }

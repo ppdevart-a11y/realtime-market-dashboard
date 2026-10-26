@@ -1,4 +1,4 @@
-<a class="skip-link" href="#main">Skip to content</a>
+<a class="skip-link" href="#main" (click)="skipToContent($event, main)">Skip to content</a>
 
 <header class="masthead">
   <div class="bar">
@@ -17,7 +17,10 @@
   </div>
 </header>
 
-<main id="main">
+<main id="main" tabindex="-1" #main>
+  <app-producer-failure
+    >Restart the producer from the dashboard, or apply settings, to try again.</app-producer-failure
+  >
   <router-outlet />
 </main>
 

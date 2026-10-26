@@ -3,11 +3,12 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter, skip } from 'rxjs';
 import { buildSha } from './build-info';
+import { ProducerFailure } from './layout/producer-failure';
 import { ProducerStatusBadge } from './layout/producer-status-badge';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, ProducerStatusBadge],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, ProducerFailure, ProducerStatusBadge],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })
@@ -35,5 +36,14 @@ export class App {
           { injector },
         );
       });
+  }
+
+  /**
+   * With `<base href="/">`, `#main` resolves to `/#main`; followed as a link it would load the app
+   * again from another page and restart the producer. Moving focus is all the skip link needs.
+   */
+  protected skipToContent(event: Event, content: HTMLElement): void {
+    event.preventDefault();
+    content.focus();
   }
 }

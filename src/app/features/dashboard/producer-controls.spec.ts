@@ -70,18 +70,23 @@ describe('ProducerControls', () => {
     ]);
   });
 
-  it('explains a failure and offers to restart the producer', async () => {
-    const { events, element, button, click, settle, producersCreated } = await render();
+  it('turns into a restart after a failure, keeping the same button and its focus', async () => {
+    const { events, button, click, settle, producersCreated } = await render();
+    const original = button();
+    original?.focus();
 
-    events.next({ type: 'failed', runId: 1, message: 'Could not load the market generator.' });
+    events.next({
+      type: 'failed',
+      runId: 1,
+      message: 'The market generator stopped unexpectedly.',
+    });
     await settle();
-    expect(element.querySelector('[role="alert"] p')?.textContent).toBe(
-      'Could not load the market generator.',
-    );
     expect(button()?.textContent.trim()).toBe('Restart producer');
 
     await click();
     expect(producersCreated()).toBe(2);
+    expect(button()).toBe(original);
+    expect(document.activeElement).toBe(original);
     expect(button()?.textContent.trim()).toBe('Pause');
   });
 });

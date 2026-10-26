@@ -3,7 +3,7 @@ import { Component, computed, inject } from '@angular/core';
 import { nominalUpdatesPerSecond } from '../../domain/producer-settings';
 import { MarketDataStore } from '../../market-data/market-data.store';
 
-/** Facts about the active run and the control to pause, resume or restart its producer. */
+/** Facts about the active run and the one control that pauses, resumes or restarts its producer. */
 @Component({
   selector: 'app-producer-controls',
   imports: [DecimalPipe],
@@ -15,18 +15,21 @@ export class ProducerControls {
 
   protected readonly nominalRate = computed(() => nominalUpdatesPerSecond(this.store.settings()));
 
-  protected readonly paused = computed(() => {
-    const status = this.store.status();
-    return status.kind === 'paused' || (status.kind === 'starting' && status.paused);
+  readonly #failed = computed(() => this.store.status().kind === 'error');
+
+  // One button whose label says what it will do. It is never replaced, so it keeps keyboard focus
+  // when the producer fails or restarts.
+  protected readonly actionLabel = computed(() => {
+    if (this.#failed()) {
+      return 'Restart producer';
+    }
+    return this.store.paused() ? 'Resume' : 'Pause';
   });
 
-  protected readonly failure = computed(() => {
-    const status = this.store.status();
-    return status.kind === 'error' ? status.message : null;
-  });
-
-  protected togglePause(): void {
-    if (this.paused()) {
+  protected act(): void {
+    if (this.#failed()) {
+      this.store.retry();
+    } else if (this.store.paused()) {
       this.store.resume();
     } else {
       this.store.pause();

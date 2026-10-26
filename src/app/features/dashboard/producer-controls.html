@@ -17,13 +17,4 @@
   </div>
 </dl>
 
-@if (failure(); as message) {
-  <div class="failure" role="alert">
-    <p>{{ message }}</p>
-    <button type="button" class="action" (click)="store.retry()">Restart producer</button>
-  </div>
-} @else {
-  <button type="button" class="action" (click)="togglePause()">
-    {{ paused() ? 'Resume' : 'Pause' }}
-  </button>
-}
+<button type="button" class="button button-primary" (click)="act()">{{ actionLabel() }}</button>
