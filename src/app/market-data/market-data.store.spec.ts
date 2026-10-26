@@ -3,7 +3,11 @@ import { type Observable, Subject } from 'rxjs';
 import { TestScheduler } from 'rxjs/testing';
 import type { ProducerCommand, ProducerEvent } from '../domain/producer-protocol';
 import { DEFAULT_PRODUCER_SETTINGS, type ProducerSettings } from '../domain/producer-settings';
-import { MarketDataStore, PRODUCER_STARTUP_TIMEOUT_MS } from './market-data.store';
+import {
+  MarketDataStore,
+  PRODUCER_STARTUP_TIMEOUT_MS,
+  type ProducerStatus,
+} from './market-data.store';
 import { PRODUCER_TRANSPORT_FACTORY, type ProducerTransport } from './producer-transport';
 
 class FakeTransport implements ProducerTransport {
@@ -246,6 +250,66 @@ describe('MarketDataStore', () => {
       expect(latest().sent).toEqual([{ type: 'start', runId: 2, settings: smallRun }]);
     });
 
+    describe('when a replacement producer cannot be created', () => {
+      function setupFailingReplacement(events: Observable<ProducerEvent>) {
+        let created = 0;
+        TestBed.configureTestingModule({
+          providers: [
+            {
+              provide: PRODUCER_TRANSPORT_FACTORY,
+              useValue: () => {
+                created += 1;
+                if (created > 1) {
+                  throw new Error('This browser cannot run Web Workers.');
+                }
+                return new FakeTransport(events);
+              },
+            },
+          ],
+        });
+        return TestBed.inject(MarketDataStore);
+      }
+
+      it('keeps the settings that were applied, so a restart retries them', () => {
+        const events = new Subject<ProducerEvent>();
+        const store = setupFailingReplacement(events);
+        store.start();
+        events.next({ type: 'failed', runId: 1, message: 'boom' });
+
+        store.apply(smallRun);
+
+        expect(store.settings()).toEqual(smallRun);
+        expect(store.status()).toEqual({
+          kind: 'error',
+          message: 'This browser cannot run Web Workers.',
+        });
+      });
+
+      it('stops listening to the replaced run, whose startup timeout would overwrite the error', () => {
+        const testScheduler = new TestScheduler((actual, expected) => {
+          expect(actual).toEqual(expected);
+        });
+        testScheduler.run(({ hot, cold }) => {
+          // The first producer never confirms its run, so that run's startup timeout keeps ticking.
+          const store = setupFailingReplacement(hot<ProducerEvent>('-'));
+          const statuses: ProducerStatus[] = [];
+
+          store.start();
+          cold('--x').subscribe(() => {
+            store.retry();
+          });
+          cold(`${PRODUCER_STARTUP_TIMEOUT_MS + 5}ms x`).subscribe(() =>
+            statuses.push(store.status()),
+          );
+
+          testScheduler.flush();
+          expect(statuses).toEqual([
+            { kind: 'error', message: 'This browser cannot run Web Workers.' },
+          ]);
+        });
+      });
+    });
+
     it('reports an error state instead of throwing when no producer can be created', () => {
       TestBed.configureTestingModule({
         providers: [
@@ -365,6 +429,22 @@ describe('MarketDataStore', () => {
           { total: 7, volumes: [7, 7, 7, 7, 7], prices: Array<number>(5).fill(10_000) },
           { total: 0, volumes: [0, 0], prices: [null, null] },
         ]);
+      });
+    });
+
+    it('does not time out a run that the producer confirmed', () => {
+      testScheduler.run(({ hot, cold }) => {
+        const events = hot<ProducerEvent>('10ms s', { s: started(1) });
+        const { store } = setup(events);
+        const statuses: string[] = [];
+
+        store.start();
+        cold(`${PRODUCER_STARTUP_TIMEOUT_MS + 1}ms a`).subscribe(() =>
+          statuses.push(store.status().kind),
+        );
+
+        testScheduler.flush();
+        expect(statuses).toEqual(['running']);
       });
     });
 

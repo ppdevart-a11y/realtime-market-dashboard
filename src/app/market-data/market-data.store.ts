@@ -4,6 +4,7 @@ import {
   animationFrameScheduler,
   auditTime,
   connect,
+  EMPTY,
   filter,
   map,
   merge,
@@ -70,7 +71,8 @@ const UNAVAILABLE: InstrumentSnapshot = {
 @Service()
 export class MarketDataStore {
   readonly #createTransport = inject(PRODUCER_TRANSPORT_FACTORY);
-  readonly #runs = new Subject<ActiveRun>();
+  /** The run whose events are applied; `null` when no producer could be created for it. */
+  readonly #runs = new Subject<ActiveRun | null>();
   #transport: ProducerTransport | null = null;
 
   readonly #runId = signal(0);
@@ -95,6 +97,9 @@ export class MarketDataStore {
     return { kind: this.#requested() };
   });
 
+  /** Whether the user asked the current run to pause, also while it is still starting. */
+  readonly paused = computed(() => this.#requested() === 'paused');
+
   /** One row per instrument of the active run; rows exist, with unavailable values, before data. */
   readonly instruments = computed<readonly InstrumentRow[]>(() => {
     const snapshot = this.#snapshot();
@@ -110,7 +115,7 @@ export class MarketDataStore {
   constructor() {
     this.#runs
       .pipe(
-        switchMap((run) => this.#eventsOf(run)),
+        switchMap((run) => (run === null ? EMPTY : this.#eventsOf(run))),
         takeUntilDestroyed(),
       )
       .subscribe((event) => {
@@ -156,16 +161,19 @@ export class MarketDataStore {
   }
 
   #beginRun(settings: ProducerSettings, { replaceProducer = false } = {}): void {
+    // Recorded before the producer is created, so a restart after a failure retries these.
+    this.#settings.set(settings);
+    this.#requested.set('running');
+    this.#snapshot.set(null);
     const transport = this.#transportForNextRun(replaceProducer);
     if (transport === null) {
+      // The previous run's producer is gone; nothing it still emits may touch the error state.
+      this.#runs.next(null);
       return;
     }
     const id = this.#runId() + 1;
     this.#runId.set(id);
-    this.#settings.set(settings);
-    this.#requested.set('running');
     this.#phase.set({ kind: 'starting' });
-    this.#snapshot.set(null);
     // Subscribe to the new run's events before asking for them.
     this.#runs.next({ id, transport });
     transport.send({ type: 'start', runId: id, settings });
