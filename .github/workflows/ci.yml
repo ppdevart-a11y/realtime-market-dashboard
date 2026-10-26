@@ -46,36 +46,43 @@ jobs:
       - name: Test
         run: cargo test --locked
 
-  web:
-    name: Web
+  # Builds what gets deployed. It is the only job a deploy waits for (see `deploy`).
+  build:
+    name: Build
     runs-on: ubuntu-latest
     timeout-minutes: 15
     # Per-job groups: a shared group would make sibling jobs of the same run cancel each other.
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-web
+      group: ${{ github.workflow }}-${{ github.ref }}-build
       cancel-in-progress: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-toolchain
 
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      - name: Build the Wasm generator
+        run: npm run wasm:build
+
+      - name: Build the application
+        # The footer names the commit, so a redeploy can be confirmed at a glance.
+        run: npm run build -- --define "BUILD_SHA='${GITHUB_SHA::7}'"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          node-version-file: .nvmrc
-          cache: npm
+          name: site
+          path: dist/realtime-market-dashboard/browser
+          if-no-files-found: error
+          retention-days: 7
 
-      - name: Install Rust
-        run: rustup toolchain install
-
-      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
-        with:
-          workspaces: wasm/market-sim
-          # wasm-pack downloads the matching wasm-bindgen CLI and binaryen here.
-          cache-directories: ~/.cache/.wasm-pack
-
-      - uses: taiki-e/install-action@1e29709c0ec63babbe8f266397a465f29a825f91 # v2.87.31
-        with:
-          tool: wasm-pack@0.15.0
-
-      - run: npm ci
+  checks:
+    name: Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-checks
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-toolchain
 
       # The pre-hooks of later scripts rebuild it too; this step makes Wasm failures and timing
       # visible on their own.
@@ -93,18 +100,7 @@ jobs:
           path: coverage/realtime-market-dashboard
           retention-days: 7
 
-      - name: Build
-        # The footer names the commit, so a redeploy can be confirmed at a glance.
-        run: npm run build -- --define "BUILD_SHA='${GITHUB_SHA::7}'"
-
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: site
-          path: dist/realtime-market-dashboard/browser
-          if-no-files-found: error
-          retention-days: 7
-
-  # Reported as its own check and deliberately not a deploy prerequisite: an advisory published
+  # Like the checks above, reported on its own and not a deploy prerequisite: an advisory published
   # upstream must stay visible without freezing the live demo.
   audit:
     name: Audit
@@ -120,9 +116,13 @@ jobs:
       - name: Audit production dependencies
         run: npm audit --omit=dev --audit-level=high
 
+  # Deploys wait for the production build only. Tests, lint and the Rust checks report on the same
+  # commit as separate statuses: a red check stays visible, but a formatting slip in a change pushed
+  # during a live demo cannot keep the old version online. In a team repository, branch protection
+  # would require the checks before anything reaches main.
   deploy:
     name: Deploy
-    needs: [rust, web]
+    needs: [build]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     # Deploys queue instead of cancelling so a half-finished upload never races a newer one.

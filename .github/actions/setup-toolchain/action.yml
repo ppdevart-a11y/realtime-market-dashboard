@@ -1,0 +1,30 @@
+name: Set up the toolchain
+description: Node from .nvmrc, Rust from rust-toolchain.toml, wasm-pack, and npm dependencies.
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      with:
+        node-version-file: .nvmrc
+        cache: npm
+
+    # Without arguments, rustup installs the toolchain, components and target that
+    # rust-toolchain.toml pins.
+    - name: Install Rust
+      shell: bash
+      run: rustup toolchain install
+
+    - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      with:
+        workspaces: wasm/market-sim
+        # wasm-pack downloads the matching wasm-bindgen CLI and binaryen here.
+        cache-directories: ~/.cache/.wasm-pack
+
+    - uses: taiki-e/install-action@1e29709c0ec63babbe8f266397a465f29a825f91 # v2.87.31
+      with:
+        tool: wasm-pack@0.15.0
+
+    - name: Install npm dependencies
+      shell: bash
+      run: npm ci

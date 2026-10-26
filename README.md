@@ -135,7 +135,7 @@ npm start        # builds the Wasm module, then serves http://localhost:4200
 ```bash
 npm test           # TypeScript: unit, component, marble and Wasm contract tests (Vitest)
 npm run test:rust  # Rust: generator tests (cargo test)
-npm run verify     # every check that gates a deploy: formatting, ESLint, Stylelint, rustfmt,
+npm run verify     # every check CI runs: formatting, ESLint, Stylelint, rustfmt,
                    # Clippy (native and wasm32), type-checking (app, specs and worker), all tests
                    # and the production build
 ```
@@ -153,11 +153,17 @@ RxJS marble tests (animation frames included), and the components run zoneless.
 
 ## Deployment
 
-GitHub Actions runs on every push: a Rust job (rustfmt, Clippy for native and wasm32, tests) and a
-web job (Wasm build, formatting, lint, type-check, tests with coverage, production build). When
-both pass, the build is published to Cloudflare Workers static assets: `main` with
-`wrangler deploy`, any other branch as a version with a public preview alias. Nothing is deployed
-by hand.
+GitHub Actions runs on every push. As soon as the production build succeeds, it is published to
+Cloudflare Workers static assets: `main` with `wrangler deploy`, any other branch as a version with
+a public preview at `https://b-<branch>-realtime-market-dashboard.ppdevart.workers.dev` (lowercase,
+non-alphanumerics replaced by dashes; the run summary prints the exact URL). Nothing is deployed by
+hand.
+
+The quality checks run alongside and report on the same commit: formatting, ESLint, Stylelint,
+type-checking and tests with coverage in one job, rustfmt, Clippy and the Rust tests in another.
+They do not hold the deploy back, so a formatting slip in a change pushed during a demo cannot
+keep the old version online; the failed check stays visible. In a team repository, branch
+protection would require them before anything reached `main`.
 
 - HTML is served with `max-age=0, must-revalidate`, so a deploy is visible on the next load;
   fingerprinted scripts, styles, fonts and the `.wasm` are immutable.

@@ -11,11 +11,12 @@ reviewable on its own URL.
 ## Decision
 
 - **CI.** GitHub Actions runs on every push, with actions pinned by commit SHA:
+  - a build job: the Wasm module and the production build stamped with the commit SHA;
+  - a checks job: formatting, lint, type-check, tests with coverage;
   - a Rust job: rustfmt, Clippy for the native and wasm32 targets, tests;
-  - a web job: Wasm build, formatting, lint, type-check, tests with coverage, and the production
-    build stamped with the commit SHA;
   - an audit job;
-  - a deploy job that needs the Rust and web jobs.
+  - a deploy job that needs only the build job. The checks report on the same commit but do not
+    hold the deploy back.
 - **Deployment.** The build is published as Cloudflare Workers static assets. `main` deploys to
   production with `wrangler deploy`. Any other branch is uploaded as a version with a preview
   alias derived from the branch name: lowercase, at most 37 characters, ending in a short hash
@@ -49,4 +50,8 @@ reviewable on its own URL.
   would need rustup and wasm-pack, and the deploy would not wait for the Rust job.
 - **Gating deploys on the audit.** Safer in a product; for a demo whose production dependencies
   are mostly the framework, it would turn someone else's advisory into a frozen demo.
+- **Gating deploys on the checks.** The usual choice, and the first version of this pipeline. It
+  meant a change pushed during the interview with one unformatted line or a pedantic lint would
+  leave the old version online without anyone noticing. In a team repository, branch protection
+  on `main` restores the gate without coupling it to deployment.
 - **Lazy routes.** A smaller first load; see the trade-off above.
