@@ -69,9 +69,11 @@ export class MarketAggregator {
    *   unknown instrument.
    */
   applyBatch(records: Uint32Array, offset: number, count: number): void {
+    if (!Number.isInteger(offset) || !Number.isInteger(count) || offset < 0 || count < 0) {
+      throw new RangeError(`Malformed batch window: offset ${offset}, count ${count}`);
+    }
     const end = offset + count * MARKET_UPDATE_WORDS;
-    const wellFormed = Number.isInteger(offset) && Number.isInteger(count) && offset >= 0;
-    if (!wellFormed || count < 0 || end > records.length) {
+    if (end > records.length) {
       throw new RangeError(`Batch [${offset}, ${end}) exceeds the ${records.length}-word buffer`);
     }
     for (let at = offset; at < end; at += MARKET_UPDATE_WORDS) {
