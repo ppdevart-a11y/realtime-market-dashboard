@@ -25,9 +25,9 @@ const OFFSET = 1_234;
 const LEADING_SYMBOLS = ['ALFA', 'BETA'] as const;
 
 /**
- * Words a generated ticker must not spell: slurs and vulgarities (including transliterated
- * Russian), words that read as data in a table (NONE, LIRA next to dollar prices), and
- * well-known real tickers or brands, so the instruments stay recognisably fictional.
+ * Words a generated ticker must not spell: slurs and vulgarities, words that read as data in a
+ * table (NONE, LIRA next to dollar prices), and well-known real tickers or brands, so the
+ * instruments stay recognisably fictional.
  */
 export const EXCLUDED_SYMBOLS: ReadonlySet<string> = new Set(
   [

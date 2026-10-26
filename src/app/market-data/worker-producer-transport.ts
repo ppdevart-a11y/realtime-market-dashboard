@@ -1,4 +1,4 @@
-import { fromEvent, map, merge, share } from 'rxjs';
+import { fromEvent, map, merge } from 'rxjs';
 import type { ProducerEvent } from '../domain/producer-protocol';
 import type { ProducerTransport } from './producer-transport';
 
@@ -38,7 +38,7 @@ export function createWorkerProducerTransport(): ProducerTransport {
       fromEvent(worker, 'messageerror').pipe(
         map(() => failure('A message from the market data worker could not be read.')),
       ),
-    ).pipe(share()),
+    ),
     send: (command) => {
       worker.postMessage(command);
     },

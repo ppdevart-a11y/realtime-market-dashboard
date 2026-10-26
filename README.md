@@ -113,7 +113,7 @@ on its next navigation, which is exactly what happens when a change is pushed du
 | Validated settings; Apply starts a new run, also from a pause            | `features/settings`, `domain/producer-settings.ts`, `market-data/market-data.store.ts`                      |
 | Navigation keeps the run; no extra producers; no stale results           | `market-data/market-data.store.ts`, `app.config.ts`                                                         |
 | Generator in Wasm with state, requested batch sizes, valid values        | `wasm/market-sim`                                                                                           |
-| Runs in a Web Worker; initialisation errors; resource cleanup            | `producer/producer.worker.ts`, `producer/wasm-market-source.ts`, `market-data/worker-producer-transport.ts` |
+| Runs in a Web Worker; initialisation errors; resource cleanup            | `producer/producer-host.ts`, `producer/wasm-market-source.ts`, `market-data/worker-producer-transport.ts`   |
 
 ## Running locally
 
@@ -178,13 +178,13 @@ protection would require them before anything reached `main`.
 Measured on the production build at the maximum settings (50 instruments, 1,000 updates every
 50 ms), over 10 seconds in Chrome 155 on an Apple-silicon laptop:
 
-| Measure                       | Result                                           |
-| ----------------------------- | ------------------------------------------------ |
-| Updates processed             | 19,982 per second (20,000 nominal)               |
-| Long tasks on the main thread | none                                             |
-| Frame rate                    | 121.8 fps on a 120 Hz display; worst frame 11 ms |
-| JavaScript heap (main thread) | 6 MB                                             |
-| Generator                     | about 25 µs per 1,000-update batch in Wasm       |
+| Measure                       | Result                                                          |
+| ----------------------------- | --------------------------------------------------------------- |
+| Updates processed             | 19,982 per second (20,000 nominal)                              |
+| Long tasks on the main thread | none                                                            |
+| Frames                        | the page kept the display's 120 Hz refresh; slowest frame 11 ms |
+| JavaScript heap (main thread) | 6 MB                                                            |
+| Generator                     | about 25 µs per 1,000-update batch in Wasm                      |
 
 Payloads, gzipped: application 104 KB, worker 3.4 KB, Wasm module 9.7 KB, styles 1.1 KB. The
 variable font adds 34 KB of WOFF2 for Latin text (Latin Extended, 19 KB, loads only when needed).

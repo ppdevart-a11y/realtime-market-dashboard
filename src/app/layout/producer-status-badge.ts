@@ -2,8 +2,8 @@ import { Component, computed, inject } from '@angular/core';
 import { MarketDataStore } from '../market-data/market-data.store';
 
 /**
- * The producer's state, visible on every page. It is the app's single polite live region for
- * status, so a change is announced once, wherever the user is; counters are never in it.
+ * The producer's state, visible on every page. It is the only live region for producer state, so
+ * a state change is announced once, wherever the user is; counters never enter a live region.
  */
 @Component({
   selector: 'app-producer-status-badge',

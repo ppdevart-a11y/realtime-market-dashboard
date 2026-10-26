@@ -17,8 +17,8 @@ be released when they are replaced or no longer needed, and initialisation error
 - The engine supersedes the current run before anything else: it cancels the pending batch and
   frees the simulator, then creates the next one. If creating it fails, no run is left
   generating.
-- Any exception from the generator is fatal to the engine, because a Wasm trap can leave the
-  instance corrupt; the worker then refuses new runs. The store recovers by terminating the worker
+- Any exception from the generator ends the run, and the worker's host then refuses new runs,
+  because a Wasm trap can leave the instance corrupt (`producer/producer-host.ts`). The store recovers by terminating the worker
   and starting a new one: on Apply once the producer has failed, and always through _Restart
   producer_.
 - Disposing the store terminates the worker.
