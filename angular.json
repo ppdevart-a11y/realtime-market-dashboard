@@ -33,7 +33,10 @@
             "styles": [
               "@fontsource-variable/atkinson-hyperlegible-next/index.css",
               "src/styles.scss"
-            ]
+            ],
+            "loader": {
+              ".wasm": "file"
+            }
           },
           "configurations": {
             "production": {
