@@ -4,5 +4,7 @@
 //! always produces the same stream on every platform.
 
 mod rng;
+mod update;
 
 pub use rng::Pcg32;
+pub use update::{MarketUpdate, UPDATE_STRIDE_WORDS};
