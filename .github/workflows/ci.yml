@@ -58,6 +58,8 @@ jobs:
       - run: npm run test:coverage
       - name: Test the generator
         run: npm run test:rust -- --locked
+      - name: Test the Cloudflare Worker
+        run: npm run test:worker
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

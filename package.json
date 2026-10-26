@@ -22,7 +22,8 @@
     "typecheck": "tsc -p tsconfig.spec.json --noEmit && tsc -p tsconfig.worker.json",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "verify": "npm run format:check && npm run lint && npm run lint:rust && npm run typecheck && npm test && npm run test:rust && npm run build"
+    "verify": "npm run format:check && npm run lint && npm run lint:rust && npm run typecheck && npm test && npm run test:rust && npm run test:worker && npm run build",
+    "test:worker": "node --test \"cloudflare/*.test.mjs\""
   },
   "private": true,
   "packageManager": "npm@11.19.1",
