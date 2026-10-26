@@ -30,7 +30,13 @@
                 "input": "public"
               }
             ],
-            "styles": ["src/styles.scss"]
+            "styles": [
+              "@fontsource-variable/atkinson-hyperlegible-next/index.css",
+              "src/styles.scss"
+            ],
+            "loader": {
+              ".wasm": "file"
+            }
           },
           "configurations": {
             "production": {
@@ -46,7 +52,15 @@
                   "maximumError": "8kB"
                 }
               ],
-              "outputHashing": "all"
+              "outputHashing": "all",
+              "optimization": {
+                "scripts": true,
+                "styles": {
+                  "minify": true,
+                  "inlineCritical": false
+                },
+                "fonts": true
+              }
             },
             "development": {
               "optimization": false,

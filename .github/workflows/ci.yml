@@ -10,91 +10,25 @@ permissions:
   contents: read
 
 jobs:
-  rust:
-    name: Rust
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-rust
-      cancel-in-progress: true
-    # rustup still finds rust-toolchain.toml at the root: it searches upwards from this directory.
-    defaults:
-      run:
-        working-directory: wasm/market-sim
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      # Without arguments, rustup installs the toolchain, components and target that
-      # rust-toolchain.toml pins.
-      - name: Install Rust
-        run: rustup toolchain install
-
-      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
-        with:
-          workspaces: wasm/market-sim
-
-      - name: Check formatting
-        run: cargo fmt --check
-
-      - name: Clippy
-        run: cargo clippy --all-targets --locked -- -D warnings
-
-      # The bindings compile natively too, but the shipped module is wasm32.
-      - name: Clippy (wasm32)
-        run: cargo clippy --target wasm32-unknown-unknown --locked -- -D warnings
-
-      - name: Test
-        run: cargo test --locked
-
-  web:
-    name: Web
+  # Builds what gets deployed.
+  build:
+    name: Build
     runs-on: ubuntu-latest
     timeout-minutes: 15
     # Per-job groups: a shared group would make sibling jobs of the same run cancel each other.
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-web
+      group: ${{ github.workflow }}-${{ github.ref }}-build
       cancel-in-progress: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-toolchain
 
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-
-      - name: Install Rust
-        run: rustup toolchain install
-
-      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
-        with:
-          workspaces: wasm/market-sim
-          # wasm-pack downloads the matching wasm-bindgen CLI and binaryen here.
-          cache-directories: ~/.cache/.wasm-pack
-
-      - uses: taiki-e/install-action@1e29709c0ec63babbe8f266397a465f29a825f91 # v2.87.31
-        with:
-          tool: wasm-pack@0.15.0
-
-      - run: npm ci
-
-      # The pre-hooks of later scripts rebuild it too; this step makes Wasm failures and timing
-      # visible on their own.
       - name: Build the Wasm generator
         run: npm run wasm:build
 
-      - run: npm run format:check
-      - run: npm run lint
-      - run: npm run typecheck
-      - run: npm run test:coverage
-
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: coverage
-          path: coverage/realtime-market-dashboard
-          retention-days: 7
-
-      - name: Build
-        run: npm run build
+      - name: Build the application
+        # The footer names the commit, so a redeploy can be confirmed at a glance.
+        run: npm run build -- --define "BUILD_SHA='${GITHUB_SHA::7}'"
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -103,8 +37,54 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-  # Reported as its own check and deliberately not a deploy prerequisite: an advisory published
-  # upstream must stay visible without freezing the live demo.
+  # Behaviour: type-checking and every test, TypeScript and Rust. A deploy waits for it.
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-test
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-toolchain
+
+      # The pre-hooks of later scripts rebuild it too; this step makes Wasm failures and timing
+      # visible on their own.
+      - name: Build the Wasm generator
+        run: npm run wasm:build
+
+      - run: npm run typecheck
+      - run: npm run test:coverage
+      - name: Test the generator
+        run: npm run test:rust -- --locked
+      - name: Test the Cloudflare Worker
+        run: npm run test:worker
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage
+          path: coverage/realtime-market-dashboard
+          retention-days: 7
+
+  # Style and static analysis: Prettier, ESLint, Stylelint, rustfmt and Clippy (native and wasm32).
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-lint
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-toolchain
+
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run lint:rust
+
+  # Like lint, reported on its own and not a deploy prerequisite: an advisory published upstream
+  # must stay visible without freezing the live demo.
   audit:
     name: Audit
     runs-on: ubuntu-latest
@@ -119,9 +99,12 @@ jobs:
       - name: Audit production dependencies
         run: npm audit --omit=dev --audit-level=high
 
+  # Deploys wait for the build and the tests, not for lint: a change pushed during a live demo must
+  # not stay offline over formatting, while a behaviour regression should. Lint and audit still
+  # report on the same commit.
   deploy:
     name: Deploy
-    needs: [rust, web]
+    needs: [build, test]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     # Deploys queue instead of cancelling so a half-finished upload never races a newer one.

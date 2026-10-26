@@ -2,8 +2,7 @@
 //!
 //! [`MarketSimulator`] owns a fixed set of instruments, each with a mean-reverting mid price and a
 //! two-sided book, and fills a preallocated buffer with batches of [`MarketUpdate`] records: one
-//! simulated trade plus the top of the book after it. The `instrument` module documents the model
-//! and its calibration.
+//! simulated trade plus the top of the book after it. The `instrument` module documents the model.
 //!
 //! [`bindings`] is the only code that knows about JavaScript. Everything else is plain Rust and is
 //! tested natively with `cargo test`.

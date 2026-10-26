@@ -1,0 +1,52 @@
+// Physical sides on purpose: bids are drawn right of zero and asks left of it, as on a depth chart,
+// whatever the writing direction.
+:host {
+  position: relative;
+  display: inline-block;
+  inline-size: 6rem;
+  block-size: 0.5rem;
+  border-radius: var(--radius-control);
+  background: var(--color-line);
+  vertical-align: middle;
+}
+
+// The zero line.
+:host::after {
+  position: absolute;
+  inset-block: -0.125rem;
+  left: 50%;
+  inline-size: 1px;
+  background: var(--color-ink-muted);
+  content: '';
+}
+
+.fill {
+  position: absolute;
+  inset-block: 0;
+  left: 50%;
+  inline-size: 50%;
+  border-radius: 0 var(--radius-control) var(--radius-control) 0;
+  background: var(--color-bid);
+  transform: scaleX(var(--imbalance, 0));
+  transform-origin: left center;
+}
+
+:host(.ask-heavy) .fill {
+  right: 50%;
+  left: auto;
+  border-radius: var(--radius-control) 0 0 var(--radius-control);
+  background: var(--color-ask);
+  transform-origin: right center;
+}
+
+// Forced-colours modes drop backgrounds, which would erase the bar; draw it with system colours.
+@media (forced-colors: active) {
+  :host {
+    border: 1px solid CanvasText;
+  }
+
+  .fill,
+  :host(.ask-heavy) .fill {
+    background: CanvasText;
+  }
+}

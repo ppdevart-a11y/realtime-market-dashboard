@@ -1,9 +1,48 @@
-import { Component } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { afterNextRender, Component, ElementRef, inject, Injector } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { filter, skip } from 'rxjs';
+import { buildSha } from './build-info';
+import { ProducerStatusBadge } from './layout/producer-status-badge';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, ProducerStatusBadge],
   templateUrl: './app.html',
+  styleUrl: './app.scss',
 })
-export class App {}
+export class App {
+  protected readonly buildSha = buildSha;
+
+  constructor() {
+    const host = inject<ElementRef<HTMLElement>>(ElementRef);
+    const injector = inject(Injector);
+    // A client-side navigation does not move focus the way a page load does; put it on the new
+    // page's heading so keyboard and screen-reader users start at the content they asked for.
+    inject(Router)
+      .events.pipe(
+        filter((event) => event instanceof NavigationEnd),
+        skip(1),
+        takeUntilDestroyed(),
+      )
+      .subscribe(() => {
+        afterNextRender(
+          {
+            write: () => {
+              host.nativeElement.querySelector<HTMLElement>('main h1')?.focus();
+            },
+          },
+          { injector },
+        );
+      });
+  }
+
+  /**
+   * With `<base href="/">`, `#main` resolves to `/#main`; followed as a link it would load the app
+   * again from another page and restart the producer. Moving focus is all the skip link needs.
+   */
+  protected skipToContent(event: Event, content: HTMLElement): void {
+    event.preventDefault();
+    content.focus();
+  }
+}

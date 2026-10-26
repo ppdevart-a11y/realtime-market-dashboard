@@ -1,9 +1,5 @@
 //! PCG32 (XSH-RR 64/32), ported line by line from the reference `pcg_basic.c`.
 //!
-//! The simulator needs a small, seedable generator whose output is identical on every platform
-//! and can be checked against published vectors. `std` has no RNG, and a crate dependency would
-//! add code size and API surface the simulator does not use.
-//!
 //! References: M. E. O'Neill, "PCG: A Family of Simple Fast Space-Efficient Statistically Good
 //! Algorithms for Random Number Generation", HMC-CS-2014-0905;
 //! <https://github.com/imneme/pcg-c-basic>.

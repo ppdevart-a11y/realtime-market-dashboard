@@ -1,4 +1,33 @@
-<main>
-  <h1>Market Monitor</h1>
+<a class="skip-link" href="#main" (click)="skipToContent($event, main)">Skip to content</a>
+
+<header class="masthead">
+  <div class="bar">
+    <a class="brand" routerLink="/">Market Monitor</a>
+    <nav aria-label="Main">
+      <a
+        routerLink="/"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+        ariaCurrentWhenActive="page"
+        >Dashboard</a
+      >
+      <a routerLink="/settings" routerLinkActive="active" ariaCurrentWhenActive="page">Settings</a>
+    </nav>
+    <app-producer-status-badge />
+  </div>
+</header>
+
+<main id="main" tabindex="-1" #main>
   <router-outlet />
 </main>
+
+<footer>
+  @if (buildSha; as sha) {
+    Build
+    <a href="https://github.com/ppdevart-a11y/realtime-market-dashboard/commit/{{ sha }}">{{
+      sha
+    }}</a>
+  } @else {
+    Local build
+  }
+</footer>

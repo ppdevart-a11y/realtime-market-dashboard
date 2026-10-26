@@ -1,0 +1,173 @@
+import { MarketAggregator } from '../domain/market-aggregator';
+import type { ProducerCommand, ProducerEvent } from '../domain/producer-protocol';
+import type { ProducerSettings } from '../domain/producer-settings';
+import type { MarketSource, MarketSourceFactory } from './market-source';
+import type { Scheduler } from './scheduler';
+
+export interface ProducerEngineDependencies {
+  readonly createSource: MarketSourceFactory;
+  /** Seed for each run's generator; a port so tests can make runs reproducible. */
+  readonly randomSeed: () => bigint;
+  readonly scheduler: Scheduler;
+  readonly emit: (event: ProducerEvent) => void;
+  /** Receives the technical detail that the user-facing failure message leaves out. */
+  readonly logError: (error: unknown) => void;
+}
+
+interface Run {
+  readonly id: number;
+  readonly settings: ProducerSettings;
+  readonly source: MarketSource;
+  readonly aggregator: MarketAggregator;
+  paused: boolean;
+  /** When the latest batch was due, on the scheduler clock; `null` before the first batch. */
+  lastDueAt: number | null;
+  cancelNextBatch: (() => void) | null;
+}
+
+/**
+ * The producer's run lifecycle, independent of the worker and of Wasm so it can be tested with
+ * a fake source and a manual clock.
+ *
+ * Invariants:
+ * - At most one run exists. A `start` supersedes the current run before anything else happens,
+ *   so a replaced run never keeps generating unseen, even if its successor fails to start.
+ * - Commands are handled synchronously, in arrival order, and batches only ever run from the
+ *   scheduler. Commands handled in one go (the host replays everything queued while the generator
+ *   loads) therefore all apply before the first batch. A `pause` arriving as a later message may
+ *   still follow one batch; the UI accepts that snapshot, as it was generated before the pause.
+ * - Batches follow the requested interval measured between due times, so timer lateness does not
+ *   accumulate. After a stall longer than an interval, one batch runs and the cadence restarts
+ *   from there: no catch-up burst, and nothing is generated for the time a run was paused.
+ * - Any exception from the generator ends the run with a `failed` event. A Wasm trap can leave the
+ *   instance poisoned, so the host retires the whole worker on the first failure
+ *   (see `producer-host.ts`) and the UI recovers by replacing it.
+ */
+export class ProducerEngine {
+  readonly #deps: ProducerEngineDependencies;
+  #run: Run | null = null;
+
+  constructor(dependencies: ProducerEngineDependencies) {
+    this.#deps = dependencies;
+  }
+
+  handle(command: ProducerCommand): void {
+    switch (command.type) {
+      case 'start':
+        this.#start(command.runId, command.settings);
+        break;
+      case 'pause':
+        this.#pause(command.runId);
+        break;
+      case 'resume':
+        this.#resume(command.runId);
+        break;
+    }
+  }
+
+  /** Ends the current run, if any, and frees its generator; later commands still work. */
+  stop(): void {
+    this.#discardRun();
+  }
+
+  #start(runId: number, settings: ProducerSettings): void {
+    this.#discardRun();
+    const seed = this.#deps.randomSeed();
+    let source: MarketSource;
+    try {
+      source = this.#deps.createSource(settings.instrumentCount, seed);
+    } catch (error) {
+      this.#fail(runId, error);
+      return;
+    }
+
+    this.#run = {
+      id: runId,
+      settings,
+      source,
+      aggregator: new MarketAggregator(settings.instrumentCount),
+      paused: false,
+      lastDueAt: null,
+      cancelNextBatch: null,
+    };
+    this.#deps.emit({ type: 'started', runId, seed: seed.toString() });
+    this.#scheduleBatch(this.#run, this.#deps.scheduler.now());
+  }
+
+  #pause(runId: number): void {
+    const run = this.#run;
+    if (run?.id !== runId || run.paused) {
+      return;
+    }
+    run.paused = true;
+    run.cancelNextBatch?.();
+    run.cancelNextBatch = null;
+  }
+
+  #resume(runId: number): void {
+    const run = this.#run;
+    if (run?.id !== runId || !run.paused) {
+      return;
+    }
+    run.paused = false;
+    const now = this.#deps.scheduler.now();
+    // A quick pause/resume keeps the original phase, so toggling can never exceed the rate.
+    const due =
+      run.lastDueAt === null ? now : Math.max(now, run.lastDueAt + run.settings.batchIntervalMs);
+    this.#scheduleBatch(run, due);
+  }
+
+  #scheduleBatch(run: Run, dueAt: number): void {
+    const delay = Math.max(0, dueAt - this.#deps.scheduler.now());
+    run.cancelNextBatch = this.#deps.scheduler.schedule(() => {
+      this.#produceBatch(run, dueAt);
+    }, delay);
+  }
+
+  #produceBatch(run: Run, dueAt: number): void {
+    run.cancelNextBatch = null;
+    try {
+      const batch = run.source.nextBatch(run.settings.updatesPerBatch);
+      run.aggregator.applyBatch(batch.records, batch.offset, batch.count);
+    } catch (error) {
+      this.#fail(run.id, error);
+      return;
+    }
+    run.lastDueAt = dueAt;
+    this.#deps.emit({
+      type: 'snapshot',
+      runId: run.id,
+      instruments: run.aggregator.snapshot(),
+      totalUpdates: run.aggregator.totalUpdates,
+    });
+
+    const now = this.#deps.scheduler.now();
+    const nextDueAt = dueAt + run.settings.batchIntervalMs;
+    // Late by less than an interval: keep the grid. Missed a whole slot: re-anchor on now.
+    this.#scheduleBatch(run, nextDueAt > now ? nextDueAt : now + run.settings.batchIntervalMs);
+  }
+
+  #fail(runId: number, error: unknown): void {
+    this.#discardRun();
+    this.#deps.logError(error);
+    this.#deps.emit({
+      type: 'failed',
+      runId,
+      message: 'The producer stopped unexpectedly.',
+    });
+  }
+
+  #discardRun(): void {
+    const run = this.#run;
+    if (run === null) {
+      return;
+    }
+    this.#run = null;
+    run.cancelNextBatch?.();
+    try {
+      run.source.dispose();
+    } catch {
+      // Disposing a generator whose instance trapped can throw again; there is nothing left to free.
+    }
+  }
+}
