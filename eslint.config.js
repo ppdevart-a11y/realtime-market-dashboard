@@ -40,7 +40,9 @@ module.exports = defineConfig([
       '@angular-eslint/prefer-output-emitter-ref': 'error',
       '@angular-eslint/use-component-view-encapsulation': 'error',
       '@typescript-eslint/explicit-member-accessibility': ['error', { accessibility: 'no-public' }],
-      '@typescript-eslint/consistent-type-imports': 'error',
+      '@typescript-eslint/consistent-type-imports': ['error', { fixStyle: 'inline-type-imports' }],
+      '@typescript-eslint/no-import-type-side-effects': 'error',
+      'no-duplicate-imports': 'error',
       // Angular declares components, directives and pipes as decorated classes that may be empty.
       '@typescript-eslint/no-extraneous-class': ['error', { allowWithDecorator: true }],
       '@typescript-eslint/switch-exhaustiveness-check': 'error',

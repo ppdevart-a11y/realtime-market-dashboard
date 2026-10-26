@@ -1,8 +1,10 @@
 name: CI
 
+# Push-only: every branch push is verified and deployed (main to production, others to a preview).
+# A pull_request trigger would re-run the same commit under a second ref without adding coverage.
 on:
   push:
-  pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -25,14 +27,16 @@ jobs:
           cache: npm
 
       - run: npm ci
-
-      - name: Audit production dependencies
-        run: npm audit --omit=dev --audit-level=high
-
       - run: npm run format:check
       - run: npm run lint
       - run: npm run typecheck
-      - run: npm test
+      - run: npm run test:coverage
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage
+          path: coverage/realtime-market-dashboard
+          retention-days: 7
 
       - name: Build
         run: npm run build
@@ -41,15 +45,28 @@ jobs:
         with:
           name: site
           path: dist/realtime-market-dashboard/browser
-          include-hidden-files: true
           if-no-files-found: error
           retention-days: 7
+
+  # Reported as its own check and deliberately not a deploy prerequisite: an advisory published
+  # upstream must stay visible without freezing the live demo.
+  audit:
+    name: Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
 
   deploy:
     name: Deploy
     needs: [web]
-    # Pull requests from forks never receive secrets; every push (any branch) deploys.
-    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     # Deploys queue instead of cancelling so a half-finished upload never races a newer one.
@@ -78,7 +95,6 @@ jobs:
         id: publish
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           WRANGLER_OUTPUT_FILE_PATH: ${{ runner.temp }}/wrangler-output.ndjson
         run: |
           set -euo pipefail
@@ -87,12 +103,16 @@ jobs:
             npx wrangler deploy --message "$message"
             url="$(jq -r 'select(.type == "deploy") | .targets[0]' "$WRANGLER_OUTPUT_FILE_PATH")"
           else
-            # Preview aliases become a DNS label "<alias>-<worker>", capped at 63 characters, so the
-            # alias gets at most 63 - 1 - len("realtime-market-dashboard") = 37 lowercase characters.
-            slug="$(tr '[:upper:]' '[:lower:]' <<< "$GITHUB_REF_NAME" | sed -E 's/[^a-z0-9]+/-/g')"
-            alias="$(cut -c1-37 <<< "b-${slug}" | sed -E 's/-+$//')"
+            # The alias becomes the DNS label "<alias>-realtime-market-dashboard" (max 63 chars), so it
+            # gets 37 characters. Truncated names end in a hash of the full branch name, so two long
+            # branches sharing a prefix never take over each other's preview URL.
+            alias="b-$(tr '[:upper:]' '[:lower:]' <<< "$GITHUB_REF_NAME" | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//')"
+            if (( ${#alias} > 37 )); then
+              alias="$(cut -c1-32 <<< "$alias" | sed -E 's/-+$//')-$(sha256sum <<< "$GITHUB_REF_NAME" | cut -c1-4)"
+            fi
             npx wrangler versions upload --preview-alias "$alias" --message "$message"
             url="$(jq -r 'select(.type == "version-upload") | .preview_alias_url // .preview_url' "$WRANGLER_OUTPUT_FILE_PATH")"
           fi
+          [[ "$url" == https://* ]] || { echo "::error::wrangler did not report a deployment URL"; exit 1; }
           echo "url=$url" >> "$GITHUB_OUTPUT"
           echo "Deployed \`${GITHUB_SHA::7}\` to $url" >> "$GITHUB_STEP_SUMMARY"

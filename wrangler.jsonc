@@ -2,6 +2,8 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "realtime-market-dashboard",
+  // Not a secret: an account ID only identifies the account; the CI API token is what authorises.
+  "account_id": "0a1770f87c44121d352456128d75f9ae",
   "compatibility_date": "2026-10-26",
   "workers_dev": true,
   // Every non-main branch is uploaded as a version with a public preview URL (see ci.yml).
