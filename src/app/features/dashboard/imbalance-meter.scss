@@ -38,3 +38,15 @@
   background: var(--color-ask);
   transform-origin: right center;
 }
+
+// Forced-colours modes drop backgrounds, which would erase the bar; draw it with system colours.
+@media (forced-colors: active) {
+  :host {
+    border: 1px solid CanvasText;
+  }
+
+  .fill,
+  :host(.ask-heavy) .fill {
+    background: CanvasText;
+  }
+}

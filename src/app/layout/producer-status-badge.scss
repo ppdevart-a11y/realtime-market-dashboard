@@ -37,3 +37,9 @@
     opacity: 0.35;
   }
 }
+
+@media (forced-colors: active) {
+  .dot {
+    background: CanvasText;
+  }
+}
