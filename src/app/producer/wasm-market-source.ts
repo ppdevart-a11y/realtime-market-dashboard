@@ -15,8 +15,9 @@ import type { MarketSourceFactory } from './market-source';
  * Batches are read in place: `generate` returns a byte offset into the module's linear memory
  * and the records are decoded from one `Uint32Array` over the whole memory, so no batch is ever
  * copied or turned into objects. That view is recreated only when the memory has grown, because
- * growth replaces `memory.buffer` and detaches views of the old one; it is refreshed after each
- * `generate`, the only call here that can allocate.
+ * growth replaces `memory.buffer` and detaches views of the old one. Creating a simulator and
+ * generating can both grow the memory, so the view is checked right after every `generate`,
+ * immediately before the batch is read.
  */
 
 /**

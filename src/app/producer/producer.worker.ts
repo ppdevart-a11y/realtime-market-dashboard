@@ -67,7 +67,9 @@ addEventListener('message', (event: MessageEvent<unknown>) => {
 // Handled here, so the browser does not also report them to the page as a generic worker error.
 addEventListener('error', (event) => {
   event.preventDefault();
-  fail(latestRunId, `The market data producer failed: ${event.message}`);
+  // `message` is empty for some error kinds; the thrown value then carries the detail.
+  const detail = event.message === '' ? describeError(event.error) : event.message;
+  fail(latestRunId, `The market data producer failed: ${detail}`);
 });
 addEventListener('unhandledrejection', (event) => {
   event.preventDefault();

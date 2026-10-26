@@ -6,6 +6,7 @@
  */
 export default {
   fetch() {
-    return new Response(null, { status: 404 });
+    // no-store: the asset may well exist after the next deploy.
+    return new Response(null, { status: 404, headers: { 'Cache-Control': 'no-store' } });
   },
 };
