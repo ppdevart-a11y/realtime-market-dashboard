@@ -3,49 +3,7 @@ import type { ProducerEvent } from '../domain/producer-protocol';
 import type { ProducerSettings } from '../domain/producer-settings';
 import type { MarketBatch, MarketSource } from './market-source';
 import { ProducerEngine } from './producer-engine';
-import type { Scheduler } from './scheduler';
-
-/** Deterministic clock: tasks run only when the test advances time. */
-class ManualScheduler implements Scheduler {
-  #now = 0;
-  #tasks: { due: number; order: number; run: () => void }[] = [];
-  #order = 0;
-
-  now(): number {
-    return this.#now;
-  }
-
-  schedule(callback: () => void, delayMs: number): () => void {
-    const task = { due: this.#now + delayMs, order: this.#order++, run: callback };
-    this.#tasks.push(task);
-    return () => {
-      this.#tasks = this.#tasks.filter((pending) => pending !== task);
-    };
-  }
-
-  /** Advances the clock, running every task that falls due along the way, in order. */
-  advanceBy(ms: number): void {
-    const target = this.#now + ms;
-    for (;;) {
-      const next = this.#tasks
-        .filter((task) => task.due <= target)
-        .sort((a, b) => a.due - b.due || a.order - b.order)
-        .at(0);
-      if (next === undefined) {
-        break;
-      }
-      this.#tasks = this.#tasks.filter((task) => task !== next);
-      this.#now = Math.max(this.#now, next.due);
-      next.run();
-    }
-    this.#now = target;
-  }
-
-  /** Moves the clock without running anything, like a thread blocked by a long task. */
-  stall(ms: number): void {
-    this.#now += ms;
-  }
-}
+import { ManualScheduler } from './testing/manual-scheduler';
 
 class FakeSource implements MarketSource {
   readonly batchSizes: number[] = [];
@@ -84,6 +42,7 @@ const settings: ProducerSettings = { instrumentCount: 2, updatesPerBatch: 3, bat
 function setup(options: { failToCreate?: boolean } = {}) {
   const scheduler = new ManualScheduler();
   const events: ProducerEvent[] = [];
+  const errors: unknown[] = [];
   const log: string[] = [];
   const sources: FakeSource[] = [];
   let seed = 41n;
@@ -100,13 +59,14 @@ function setup(options: { failToCreate?: boolean } = {}) {
       return source;
     },
     emit: (event) => events.push(event),
+    logError: (error) => errors.push(error),
   });
   const snapshots = (runId?: number) =>
     events.filter(
       (event): event is Extract<ProducerEvent, { type: 'snapshot' }> =>
         event.type === 'snapshot' && (runId === undefined || event.runId === runId),
     );
-  return { engine, scheduler, events, log, sources, snapshots };
+  return { engine, scheduler, events, errors, log, sources, snapshots };
 }
 
 describe('ProducerEngine', () => {
@@ -255,25 +215,16 @@ describe('ProducerEngine', () => {
     expect(sources[1]?.batchSizes).toHaveLength(1);
   });
 
-  it('fails the run and stops for good when the generator cannot be created', () => {
-    const { engine, scheduler, events } = setup({ failToCreate: true });
+  it('fails the run when the generator cannot be created, logging the cause', () => {
+    const { engine, scheduler, events, errors } = setup({ failToCreate: true });
 
     engine.handle({ type: 'start', runId: 1, settings });
-    engine.handle({ type: 'start', runId: 2, settings });
     scheduler.advanceBy(1_000);
 
     expect(events).toEqual([
-      {
-        type: 'failed',
-        runId: 1,
-        message: 'The market generator stopped unexpectedly: instantiate failed',
-      },
-      {
-        type: 'failed',
-        runId: 2,
-        message: 'The market generator stopped after an earlier failure. Restart the producer.',
-      },
+      { type: 'failed', runId: 1, message: 'The market generator stopped unexpectedly.' },
     ]);
+    expect(errors).toEqual([new Error('instantiate failed')]);
   });
 
   it('fails the run, releases the generator and stops ticking when a batch throws', () => {
@@ -288,7 +239,7 @@ describe('ProducerEngine', () => {
     expect(events.at(-1)).toEqual({
       type: 'failed',
       runId: 1,
-      message: 'The market generator stopped unexpectedly: unreachable',
+      message: 'The market generator stopped unexpectedly.',
     });
     expect(source.disposed).toBe(true);
     expect(source.batchSizes).toHaveLength(1);

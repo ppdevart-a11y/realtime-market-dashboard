@@ -6,7 +6,6 @@ import init, {
 } from 'market-sim';
 import { MARKET_UPDATE_WORDS } from '../domain/market-update';
 import { PRODUCER_SETTINGS_LIMITS } from '../domain/producer-settings';
-import { describeError } from '../shared/describe-error';
 import type { MarketSourceFactory } from './market-source';
 
 /**
@@ -24,8 +23,9 @@ import type { MarketSourceFactory } from './market-source';
  * Instantiates the generator module and returns a factory of sources backed by it.
  *
  * @param module URL of the `.wasm` file in the app; the module bytes themselves in tests.
- * @throws (rejects) with a message fit for the UI if the module cannot be fetched or compiled, or
- *   if it was built with a different record layout or different limits than this bundle expects.
+ * @throws (rejects) with a message fit for the UI, and the technical detail as its `cause`, if the
+ *   module cannot be fetched or compiled, or if it was built with a different record layout or
+ *   different limits than this bundle expects.
  */
 export async function loadWasmMarketSourceFactory(
   module: URL | BufferSource,
@@ -34,9 +34,8 @@ export async function loadWasmMarketSourceFactory(
   try {
     ({ memory } = await init({ module_or_path: module }));
   } catch (error) {
-    throw new Error(`The market generator could not be loaded: ${describeError(error)}`, {
-      cause: error,
-    });
+    // The cause carries the technical detail for the log; the message is what the user sees.
+    throw new Error('The market generator could not be loaded.', { cause: error });
   }
   if (
     updateStrideWords() !== MARKET_UPDATE_WORDS ||

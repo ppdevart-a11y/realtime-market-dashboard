@@ -1,7 +1,6 @@
 import { MarketAggregator } from '../domain/market-aggregator';
 import type { ProducerCommand, ProducerEvent } from '../domain/producer-protocol';
 import type { ProducerSettings } from '../domain/producer-settings';
-import { describeError } from '../shared/describe-error';
 import type { MarketSource, MarketSourceFactory } from './market-source';
 import type { Scheduler } from './scheduler';
 
@@ -11,6 +10,8 @@ export interface ProducerEngineDependencies {
   readonly randomSeed: () => bigint;
   readonly scheduler: Scheduler;
   readonly emit: (event: ProducerEvent) => void;
+  /** Receives the technical detail that the user-facing failure message leaves out. */
+  readonly logError: (error: unknown) => void;
 }
 
 interface Run {
@@ -32,17 +33,19 @@ interface Run {
  * - At most one run exists. A `start` supersedes the current run before anything else happens,
  *   so a replaced run never keeps generating unseen, even if its successor fails to start.
  * - Commands are handled synchronously, in arrival order, and batches only ever run from the
- *   scheduler. A `pause` queued right behind a `start` therefore always wins over the first batch.
+ *   scheduler. Commands handled in one go (the host replays everything queued while the generator
+ *   loads) therefore all apply before the first batch. A `pause` arriving as a later message may
+ *   still follow one batch; the UI accepts that snapshot, as it was generated before the pause.
  * - Batches follow the requested interval measured between due times, so timer lateness does not
  *   accumulate. After a stall longer than an interval, one batch runs and the cadence restarts
  *   from there: no catch-up burst, and nothing is generated for the time a run was paused.
- * - Any exception from the generator is fatal. A Wasm trap can leave the instance poisoned, so the
- *   engine reports the failure and refuses further work; the UI recovers by replacing the worker.
+ * - Any exception from the generator ends the run with a `failed` event. A Wasm trap can leave the
+ *   instance poisoned, so the host retires the whole worker on the first failure
+ *   (see `producer-host.ts`) and the UI recovers by replacing it.
  */
 export class ProducerEngine {
   readonly #deps: ProducerEngineDependencies;
   #run: Run | null = null;
-  #stopped = false;
 
   constructor(dependencies: ProducerEngineDependencies) {
     this.#deps = dependencies;
@@ -64,15 +67,6 @@ export class ProducerEngine {
 
   #start(runId: number, settings: ProducerSettings): void {
     this.#discardRun();
-    if (this.#stopped) {
-      this.#deps.emit({
-        type: 'failed',
-        runId,
-        message: 'The market generator stopped after an earlier failure. Restart the producer.',
-      });
-      return;
-    }
-
     const seed = this.#deps.randomSeed();
     let source: MarketSource;
     try {
@@ -149,12 +143,12 @@ export class ProducerEngine {
   }
 
   #fail(runId: number, error: unknown): void {
-    this.#stopped = true;
     this.#discardRun();
+    this.#deps.logError(error);
     this.#deps.emit({
       type: 'failed',
       runId,
-      message: `The market generator stopped unexpectedly: ${describeError(error)}`,
+      message: 'The market generator stopped unexpectedly.',
     });
   }
 
