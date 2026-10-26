@@ -7,14 +7,20 @@ import {
   nominalUpdatesPerSecond,
   PRODUCER_SETTINGS_LIMITS,
   type ProducerSettingKey,
+  type ProducerSettings,
   type SettingViolation,
   settingViolation,
 } from '../../domain/producer-settings';
 import { MarketDataStore } from '../../market-data/market-data.store';
 import { NumberField } from './number-field';
+import { readNumberText } from './number-text';
 
-/** The form's model: the producer settings, except that a field may be empty while edited. */
-type SettingsDraft = Record<ProducerSettingKey, number | null>;
+/**
+ * The form's model: each setting as the text in its field. Converting to numbers happens here,
+ * with `readNumberText`, rather than in Signal Forms, whose `Number()` reading accepts far more
+ * than the hints show.
+ */
+type SettingsDraft = Record<ProducerSettingKey, string>;
 
 const quantity = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 });
 const plural = new Intl.PluralRules('en-US');
@@ -50,6 +56,9 @@ const FIELDS = (Object.keys(FIELD_COPY) as ProducerSettingKey[]).map((key) => ({
   ...FIELD_COPY[key],
 }));
 
+/** For text that is not a number in the hints' format, such as `0x10`, `1e1` or `-5`. */
+const UNREADABLE_MESSAGE = 'Enter a whole number using digits, such as 500 or 1,000.';
+
 function violationMessage(violation: SettingViolation, { min, max }: IntegerRange): string {
   switch (violation) {
     case 'required':
@@ -63,13 +72,36 @@ function violationMessage(violation: SettingViolation, { min, max }: IntegerRang
   }
 }
 
+/** Shows settings the way the hints print numbers ("1,000"), which `readNumberText` reads back. */
+function toDraft(settings: ProducerSettings): SettingsDraft {
+  return {
+    instrumentCount: quantity.format(settings.instrumentCount),
+    updatesPerBatch: quantity.format(settings.updatesPerBatch),
+    batchIntervalMs: quantity.format(settings.batchIntervalMs),
+  };
+}
+
+/** The number each field holds, or `null` for empty or unreadable text. */
+function numbersOf(draft: SettingsDraft): Record<ProducerSettingKey, number | null> {
+  const read = (text: string) => {
+    const parsed = readNumberText(text);
+    return parsed.kind === 'number' ? parsed.value : null;
+  };
+  return {
+    instrumentCount: read(draft.instrumentCount),
+    updatesPerBatch: read(draft.updatesPerBatch),
+    batchIntervalMs: read(draft.batchIntervalMs),
+  };
+}
+
 /**
  * Edits the producer settings as a draft. Nothing reaches the producer until the form is
  * submitted, and a valid submit always starts a new run, also with unchanged values and from a
  * pause, so "Apply settings" doubles as the restart.
  *
  * Validation delegates to `settingViolation`, the rule the worker applies to every start command,
- * so the form and the producer cannot disagree about what is valid.
+ * so the form and the producer cannot disagree about what is valid. The form itself only adds the
+ * rule for text it cannot read.
  */
 @Component({
   selector: 'app-settings-page',
@@ -80,7 +112,7 @@ function violationMessage(violation: SettingViolation, { min, max }: IntegerRang
 export class SettingsPage {
   readonly #store = inject(MarketDataStore);
   /** Starts from the active run's settings each time the page opens. */
-  readonly #draft = signal<SettingsDraft>({ ...this.#store.settings() });
+  readonly #draft = signal<SettingsDraft>(toDraft(this.#store.settings()));
 
   protected readonly fields = FIELDS;
 
@@ -89,7 +121,11 @@ export class SettingsPage {
     (path) => {
       for (const { key } of FIELDS) {
         validate(path[key], ({ value }) => {
-          const violation = settingViolation(key, value());
+          const text = readNumberText(value());
+          if (text.kind === 'unreadable') {
+            return { kind: 'unreadable', message: UNREADABLE_MESSAGE };
+          }
+          const violation = settingViolation(key, text.kind === 'empty' ? null : text.value);
           return violation === null
             ? null
             : {
@@ -117,36 +153,36 @@ export class SettingsPage {
   protected readonly announcement = signal('');
 
   protected readonly preview = computed(() => {
-    const draft = this.#draft();
-    // A field with unparseable text keeps its last valid value in the model, so check validity too.
-    if (this.settingsForm().invalid() || !isProducerSettings(draft)) {
+    const settings = numbersOf(this.#draft());
+    if (!isProducerSettings(settings)) {
       return 'The resulting rate appears here once every value is valid.';
     }
     return (
-      `${updates(draft.updatesPerBatch)} every ${quantity.format(draft.batchIntervalMs)} ms is ` +
-      `${updates(nominalUpdatesPerSecond(draft))} per second across all instruments.`
+      `${updates(settings.updatesPerBatch)} every ${quantity.format(settings.batchIntervalMs)} ms ` +
+      `is ${updates(nominalUpdatesPerSecond(settings))} per second across all instruments.`
     );
   });
 
+  /** Compares numbers, not text, so " 5 " or "1,000" for an unchanged value is no change. */
   protected readonly hasUnsavedChanges = computed(() => {
-    const draft = this.#draft();
+    const values = numbersOf(this.#draft());
     const active = this.#store.settings();
-    return this.settingsForm().invalid() || FIELDS.some(({ key }) => draft[key] !== active[key]);
+    return FIELDS.some(({ key }) => values[key] !== active[key]);
   });
 
   /** Changes only the form; the defaults reach the producer when they are applied. */
   protected resetToDefaults(): void {
-    this.settingsForm().reset({ ...DEFAULT_PRODUCER_SETTINGS });
+    this.settingsForm().reset(toDraft(DEFAULT_PRODUCER_SETTINGS));
   }
 
   #apply(): void {
-    const draft = this.#draft();
+    const settings = numbersOf(this.#draft());
     // Always true here, because submission only reaches the action once every field is valid.
-    if (!isProducerSettings(draft)) {
+    if (!isProducerSettings(settings)) {
       return;
     }
-    this.#store.apply({ ...draft });
-    this.settingsForm().reset();
+    this.#store.apply({ ...settings });
+    this.settingsForm().reset(toDraft(settings));
     this.announcement.set(`Run ${this.#store.runId()} started with the new settings.`);
   }
 

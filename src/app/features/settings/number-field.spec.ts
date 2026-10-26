@@ -8,10 +8,10 @@ import { NumberField } from './number-field';
   template: `<app-number-field [field]="sample.count" label="Count" hint="From 1 to 9." />`,
 })
 class Host {
-  readonly model = signal<{ count: number | null }>({ count: 5 });
+  readonly model = signal({ count: '5' });
   readonly sample = form(this.model, (path) => {
     validate(path.count, ({ value }) =>
-      value() === 7 ? { kind: 'seven', message: 'Seven is not allowed.' } : null,
+      value() === '7' ? { kind: 'seven', message: 'Seven is not allowed.' } : null,
     );
   });
 }
@@ -51,10 +51,9 @@ describe('NumberField', () => {
   });
 
   it('flags an invalid value only once the field has been left', async () => {
-    const { host, input, describedBy, textOf, edit } = await render();
+    const { input, describedBy, textOf, edit } = await render();
 
     await edit('7');
-    expect(host.model().count).toBe(7);
     expect(input.hasAttribute('aria-invalid')).toBe(false);
     expect(describedBy()).toHaveLength(1);
 
@@ -68,20 +67,13 @@ describe('NumberField', () => {
     expect(describedBy()).toHaveLength(1);
   });
 
-  it('reports text that is not a number without changing the model', async () => {
-    const { host, describedBy, textOf, edit } = await render();
-
-    await edit('12a', { leave: true });
-
-    expect(host.model().count).toBe(5);
-    expect(textOf(describedBy()[1])).toBe('Error: Enter a number using digits only.');
-  });
-
-  it('reads empty text as no value', async () => {
+  it('keeps the text exactly as typed, for the form to read', async () => {
     const { host, edit } = await render();
 
-    await edit('');
+    await edit(' 1,000 ');
+    expect(host.model().count).toBe(' 1,000 ');
 
-    expect(host.model().count).toBeNull();
+    await edit('0x10');
+    expect(host.model().count).toBe('0x10');
   });
 });

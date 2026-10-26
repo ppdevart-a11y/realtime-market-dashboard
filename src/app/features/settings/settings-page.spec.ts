@@ -16,6 +16,7 @@ const smallRun: ProducerSettings = {
   updatesPerBatch: 10,
   batchIntervalMs: 100,
 };
+const UNREADABLE = 'Enter a whole number using digits, such as 500 or 1,000.';
 
 /**
  * Renders the page against the real store on a producer that records commands, after an optional
@@ -106,7 +107,13 @@ describe('SettingsPage', () => {
   it.each<[Label, string, string]>([
     ['Instrument count', '', 'Enter a value.'],
     ['Instrument count', '2.5', 'Enter a whole number.'],
-    ['Instrument count', 'five', 'Enter a number using digits only.'],
+    ['Instrument count', 'five', UNREADABLE],
+    ['Instrument count', '0x10', UNREADABLE],
+    ['Instrument count', '0b11', UNREADABLE],
+    ['Instrument count', '1e1', UNREADABLE],
+    ['Instrument count', '.5e1', UNREADABLE],
+    ['Instrument count', '-5', UNREADABLE],
+    ['Updates per batch', '1,00', UNREADABLE],
     ['Instrument count', '0', 'Enter 1 or more.'],
     ['Instrument count', '51', 'Enter 50 or less.'],
     ['Updates per batch', '1001', 'Enter 1,000 or less.'],
@@ -127,7 +134,11 @@ describe('SettingsPage', () => {
     ['Updates per batch', '1000'],
     ['Batch interval', '50'],
     ['Batch interval', '2000'],
-  ])('accepts %s at the boundary %s', async (label, text) => {
+    // The thousands separator the hints print, and surrounding whitespace.
+    ['Updates per batch', '1,000'],
+    ['Batch interval', ' 2,000 '],
+    ['Instrument count', ' 50 '],
+  ])('accepts %s as "%s"', async (label, text) => {
     const page = await render();
 
     await page.enter(label, text);
@@ -180,6 +191,36 @@ describe('SettingsPage', () => {
     });
   });
 
+  it('applies numbers typed with separators and spaces, then shows them as the hints do', async () => {
+    const page = await render();
+
+    await page.enter('Updates per batch', ' 1,000 ');
+    await page.enter('Batch interval', '2000');
+    await page.press('Apply settings');
+
+    expect(page.store.settings()).toEqual({
+      instrumentCount: 5,
+      updatesPerBatch: 1_000,
+      batchIntervalMs: 2_000,
+    });
+    expect(page.values()).toEqual(['5', '1,000', '2,000']);
+  });
+
+  it.each(['0x10', '1e1', '.5e1'])(
+    'never applies %j, which Number() would read as a number',
+    async (text) => {
+      const page = await render();
+
+      await page.enter('Instrument count', text);
+      await page.press('Apply settings');
+
+      expect(page.errorOf('Instrument count')).toBe(`Error: ${UNREADABLE}`);
+      expect(page.store.runId()).toBe(1);
+      expect(page.store.settings()).toEqual(DEFAULT_PRODUCER_SETTINGS);
+      expect(page.sent).toEqual([{ type: 'start', runId: 1, settings: DEFAULT_PRODUCER_SETTINGS }]);
+    },
+  );
+
   it('on an invalid submit, reveals every error, focuses the first one and sends nothing', async () => {
     const page = await render();
     await page.enter('Updates per batch', '0', { leave: false });
@@ -217,7 +258,7 @@ describe('SettingsPage', () => {
     await page.enter('Instrument count', '6');
     expect(page.pageText()).toContain('Unsaved changes');
 
-    await page.enter('Instrument count', '5');
+    await page.enter('Instrument count', ' 5 ');
     expect(page.pageText()).not.toContain('Unsaved changes');
 
     await page.enter('Instrument count', '5x');
@@ -239,7 +280,6 @@ describe('SettingsPage', () => {
     await page.enter('Batch interval', '20');
     expect(page.pageText()).toContain('The resulting rate appears here once every value is valid.');
 
-    // Unreadable text leaves the model at its last valid value (2,000), which must not be previewed.
     await page.enter('Batch interval', '2000');
     await page.enter('Batch interval', '2s');
     expect(page.pageText()).not.toContain('per second across all instruments');
