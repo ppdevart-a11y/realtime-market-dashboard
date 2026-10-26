@@ -171,7 +171,7 @@ describe('SettingsPage', () => {
     expect(page.store.settings()).toEqual(smallRun);
     expect(page.store.instruments().map((row) => row.volume)).toEqual([0, 0]);
     expect(page.sent.at(-1)).toEqual({ type: 'start', runId: 2, settings: smallRun });
-    expect(page.confirmation()).toBe('Run 2 started with the new settings.');
+    expect(page.confirmation()).toBe('Settings applied. Run 2 is starting.');
     expect(page.pageText()).not.toContain('Unsaved changes');
 
     // Applying starts a fresh edit: errors wait until a field is left again.

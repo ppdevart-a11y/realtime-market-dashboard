@@ -186,7 +186,8 @@ export class SettingsPage {
     this.#store.apply(settings);
     // Shows the values as the hints print them, and clears touched state for the next edit.
     this.settingsForm().reset(toDraft(settings));
-    this.announcement.set(`Run ${this.#store.runId()} started with the new settings.`);
+    // The worker has not confirmed the run yet; the status badge announces when it is running.
+    this.announcement.set(`Settings applied. Run ${this.#store.runId()} is starting.`);
   }
 
   #focusFirstInvalidField(): void {
