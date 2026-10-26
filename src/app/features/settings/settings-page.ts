@@ -95,6 +95,15 @@ function numbersOf(draft: SettingsDraft): Record<ProducerSettingKey, number | nu
 }
 
 /**
+ * The settings the draft describes, or `null` unless every field holds a valid value. Uses the
+ * same rules as the field validators, so it is the form's validity and its value in one reading.
+ */
+function readSettings(draft: SettingsDraft): ProducerSettings | null {
+  const values = numbersOf(draft);
+  return isProducerSettings(values) ? { ...values } : null;
+}
+
+/**
  * Edits the producer settings as a draft. Nothing reaches the producer until the form is
  * submitted, and a valid submit always starts a new run, also with unchanged values and from a
  * pause, so "Apply settings" doubles as the restart.
@@ -116,45 +125,30 @@ export class SettingsPage {
 
   protected readonly fields = FIELDS;
 
-  protected readonly settingsForm = form(
-    this.#draft,
-    (path) => {
-      for (const { key } of FIELDS) {
-        validate(path[key], ({ value }) => {
-          const text = readNumberText(value());
-          if (text.kind === 'unreadable') {
-            return { kind: 'unreadable', message: UNREADABLE_MESSAGE };
-          }
-          const violation = settingViolation(key, text.kind === 'empty' ? null : text.value);
-          return violation === null
-            ? null
-            : {
-                kind: violation,
-                message: violationMessage(violation, PRODUCER_SETTINGS_LIMITS[key]),
-              };
-        });
-      }
-    },
-    {
-      submission: {
-        // `submit()` marks every field touched first, then runs exactly one of these.
-        action: () => {
-          this.#apply();
-          return Promise.resolve();
-        },
-        onInvalid: () => {
-          this.#focusFirstInvalidField();
-        },
-      },
-    },
-  );
+  protected readonly settingsForm = form(this.#draft, (path) => {
+    for (const { key } of FIELDS) {
+      validate(path[key], ({ value }) => {
+        const text = readNumberText(value());
+        if (text.kind === 'unreadable') {
+          return { kind: 'unreadable', message: UNREADABLE_MESSAGE };
+        }
+        const violation = settingViolation(key, text.kind === 'empty' ? null : text.value);
+        return violation === null
+          ? null
+          : {
+              kind: violation,
+              message: violationMessage(violation, PRODUCER_SETTINGS_LIMITS[key]),
+            };
+      });
+    }
+  });
 
   /** Confirmation for the polite live region; empty until the first successful apply. */
   protected readonly announcement = signal('');
 
   protected readonly preview = computed(() => {
-    const settings = numbersOf(this.#draft());
-    if (!isProducerSettings(settings)) {
+    const settings = readSettings(this.#draft());
+    if (settings === null) {
       return 'The resulting rate appears here once every value is valid.';
     }
     return (
@@ -175,20 +169,33 @@ export class SettingsPage {
     this.settingsForm().reset(toDraft(DEFAULT_PRODUCER_SETTINGS));
   }
 
-  #apply(): void {
-    const settings = numbersOf(this.#draft());
-    // Always true here, because submission only reaches the action once every field is valid.
-    if (!isProducerSettings(settings)) {
+  /**
+   * Submits the form (Apply settings or Enter). Valid settings start a new run; otherwise every
+   * error is revealed and the first invalid field receives focus.
+   *
+   * Handled here rather than through Signal Forms' `submit()`, whose action must return a promise:
+   * applying is synchronous, and the reading that decides validity also yields the values.
+   */
+  protected applySettings(): void {
+    const settings = readSettings(this.#draft());
+    if (settings === null) {
+      this.settingsForm().markAsTouched();
+      this.#focusFirstInvalidField();
       return;
     }
-    this.#store.apply({ ...settings });
+    this.#store.apply(settings);
+    // Shows the values as the hints print them, and clears touched state for the next edit.
     this.settingsForm().reset(toDraft(settings));
     this.announcement.set(`Run ${this.#store.runId()} started with the new settings.`);
   }
 
   #focusFirstInvalidField(): void {
-    FIELDS.map(({ key }) => this.settingsForm[key])
-      .find((field) => field().invalid())?.()
-      .focusBoundControl();
+    for (const { key } of FIELDS) {
+      const field = this.settingsForm[key]();
+      if (field.invalid()) {
+        field.focusBoundControl();
+        return;
+      }
+    }
   }
 }

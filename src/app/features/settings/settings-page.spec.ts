@@ -173,6 +173,10 @@ describe('SettingsPage', () => {
     expect(page.sent.at(-1)).toEqual({ type: 'start', runId: 2, settings: smallRun });
     expect(page.confirmation()).toBe('Run 2 started with the new settings.');
     expect(page.pageText()).not.toContain('Unsaved changes');
+
+    // Applying starts a fresh edit: errors wait until a field is left again.
+    await page.enter('Instrument count', '0', { leave: false });
+    expect(page.errorOf('Instrument count')).toBeNull();
   });
 
   it('restarts a paused producer when applied, even without changes', async () => {

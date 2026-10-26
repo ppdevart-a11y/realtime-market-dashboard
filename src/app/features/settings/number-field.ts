@@ -53,7 +53,7 @@ export class NumberField {
   readonly hint = input.required<string>();
 
   readonly #id = ++nextId;
-  protected readonly inputId = `number-field-${String(this.#id)}`;
+  protected readonly inputId = `number-field-${this.#id}`;
   protected readonly hintId = `${this.inputId}-hint`;
   protected readonly errorId = `${this.inputId}-error`;
 

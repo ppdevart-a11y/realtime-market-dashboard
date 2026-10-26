@@ -1,7 +1,7 @@
 <h1 tabindex="-1">Producer settings</h1>
 <p class="intro">Changes take effect only when you apply them.</p>
 
-<form [formRoot]="settingsForm">
+<form [formRoot]="settingsForm" (submit)="applySettings()">
   @for (field of fields; track field.key) {
     <app-number-field [field]="settingsForm[field.key]" [label]="field.label" [hint]="field.hint" />
   }
