@@ -5,6 +5,9 @@
 //! simulated trade plus the top of the book after it. The `instrument` module documents the model
 //! and its calibration.
 //!
+//! [`bindings`] is the only code that knows about JavaScript. Everything else is plain Rust and is
+//! tested natively with `cargo test`.
+//!
 //! All randomness comes from [`Pcg32`], a port of the PCG reference implementation, and the model
 //! uses only correctly rounded floating-point operations, so `(instrument_count, seed)` determines
 //! the stream bit for bit on every platform.
@@ -15,6 +18,7 @@
 //! types that cannot be zero, and the model keeps every price within bounds where integer
 //! arithmetic cannot overflow.
 
+pub mod bindings;
 mod instrument;
 mod rng;
 mod simulator;

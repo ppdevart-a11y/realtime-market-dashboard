@@ -17,3 +17,21 @@ unsafe_code = "deny"
 
 [lints.clippy]
 pedantic = { level = "warn", priority = -1 }
+
+[dependencies]
+# Exact: wasm-pack runs the wasm-bindgen CLI matching the version in Cargo.lock, and the two
+# must agree on the generated glue.
+wasm-bindgen = "=0.2.129"
+
+[profile.release]
+# Measured on this crate: opt-level 3 gave a smaller module than "s" or "z" (inlining lets LLVM
+# drop bounds checks) and faster code. `panic = "abort"` is deliberately absent: it is already the
+# wasm32-unknown-unknown default, and setting it produced a byte-identical module.
+opt-level = 3
+lto = true
+codegen-units = 1
+
+[package.metadata.wasm-pack.profile.release.wasm-bindgen]
+# The glue must not default to `new URL("…_bg.wasm", import.meta.url)`: the bundler fingerprints
+# the module, and the worker passes that URL to the init function explicitly.
+omit-default-module-path = true
