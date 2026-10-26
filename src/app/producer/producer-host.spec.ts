@@ -115,15 +115,17 @@ describe('createProducerHost', () => {
     ]);
   });
 
-  it('attributes an error that escaped every handler to the latest run', async () => {
-    const { host, posted, logged, resolveSources, settle } = setup();
+  it('attributes an error that escaped every handler to the latest run and stops it', async () => {
+    const { host, scheduler, posted, logged, resolveSources, settle } = setup();
     resolveSources(createSource);
     await settle();
     host.receive(start(3));
     const escaped = new Error('boom');
 
     host.fail(escaped);
+    scheduler.advanceBy(10_000);
 
+    expect(posted.filter((event) => event.type === 'snapshot')).toEqual([]);
     expect(posted.at(-1)).toEqual({
       type: 'failed',
       runId: 3,

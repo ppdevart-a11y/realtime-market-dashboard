@@ -65,6 +65,11 @@ export class ProducerEngine {
     }
   }
 
+  /** Ends the current run, if any, and frees its generator; later commands still work. */
+  stop(): void {
+    this.#discardRun();
+  }
+
   #start(runId: number, settings: ProducerSettings): void {
     this.#discardRun();
     const seed = this.#deps.randomSeed();

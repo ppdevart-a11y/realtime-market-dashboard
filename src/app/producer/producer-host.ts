@@ -106,6 +106,8 @@ export function createProducerHost(deps: ProducerHostDependencies): ProducerHost
       dispatch(data);
     },
     fail(error) {
+      // The worker may be in an inconsistent state: nothing it generates from here on is trusted.
+      engine?.stop();
       fail(latestRunId, 'The market data producer failed unexpectedly.', error);
     },
   };
