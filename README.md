@@ -57,21 +57,21 @@ Each decision is recorded with its context, consequences and rejected alternativ
 [`docs/adr`](docs/adr/README.md).
 
 **Rust for the generator.** The assignment requires randomness and price logic to really run in
-Wasm. Rust gives a small module (about 20 KB, 9.7 KB gzipped) with no runtime, and native unit
-tests for the model. The RNG is a line-by-line port of the PCG32 reference, checked against its
-published test vectors, and the model uses only correctly rounded floating-point operations, so a
-seed produces the same stream natively and in Wasm. One golden fixture is shared by the Rust
-tests and by the TypeScript contract test against the compiled module.
+Wasm. Rust gives a small module (about 20 KB, 9.7 KB gzipped) without a garbage collector, and
+native unit tests for the model. The RNG is a line-by-line port of the PCG32 reference, checked
+against its published test vectors, and the model uses only correctly rounded floating-point
+operations, so a seed produces the same stream natively and in Wasm. One golden fixture is shared by
+the Rust tests and by the TypeScript contract test against the compiled module.
 
-**The price model** is a mean-reverting relative deviation around a per-instrument anchor, in
-trade time (activity drives price change, not wall-clock time), with a two-sided book that
-drifts towards a typical depth. Every trade executes at that update's bid or ask, against a side
-that displays quantity; the reported book is the state after the trade. Calibration, invariants
-and why `exp`/`ln` are avoided are documented in `wasm/market-sim/src/instrument.rs`.
+**The price model** pulls each instrument's price back towards its own anchor with small random
+steps, in trade time (activity drives price change, not wall-clock time), and keeps a two-sided book
+whose quantities revert to a typical depth. Every trade executes at that update's bid or ask,
+against a side that displays quantity; the reported book is the state after the trade. Calibration,
+invariants and why `exp`/`ln` are avoided are documented in `wasm/market-sim/src/instrument.rs`.
 
 **Batches are read in place.** `generate` fills a buffer allocated once per simulator and returns
-its address; the worker decodes records straight from a `Uint32Array` over Wasm memory. No batch
-is copied or turned into objects, at any rate. The view is recreated only after memory growth,
+its address; the worker decodes records straight from a `Uint32Array` over Wasm memory. No batch is
+copied or turned into objects, at any update rate. The view is recreated only after memory growth,
 and is never stored or posted (structured clone would copy all of linear memory).
 
 **Metrics are computed in the worker.** Every trade is counted there exactly once, before any
@@ -119,9 +119,10 @@ on its next navigation, which is exactly what happens when a change is pushed du
 
 Prerequisites:
 
-- Node.js 24.15 or later (`.nvmrc` pins the version CI uses).
+- Node.js 24, from 24.15 (`.nvmrc` pins the exact version CI uses).
 - Rust through [rustup](https://rustup.rs). The toolchain, its components and the `wasm32` target
-  are pinned in `rust-toolchain.toml` and installed on first use.
+  are pinned in `rust-toolchain.toml` and installed on first use (or up front with
+  `rustup toolchain install`).
 - wasm-pack 0.15: `cargo install wasm-pack --locked --version 0.15.0`.
 
 ```bash
@@ -134,8 +135,9 @@ npm start        # builds the Wasm module, then serves http://localhost:4200
 ```bash
 npm test           # TypeScript: unit, component, marble and Wasm contract tests (Vitest)
 npm run test:rust  # Rust: generator tests (cargo test)
-npm run verify     # everything CI checks: formatting, ESLint, Stylelint, rustfmt and Clippy,
-                   # type-checking (app, specs and worker), all tests and the production build
+npm run verify     # every check that gates a deploy: formatting, ESLint, Stylelint, rustfmt,
+                   # Clippy (native and wasm32), type-checking (app, specs and worker), all tests
+                   # and the production build
 ```
 
 No test waits in real time: the engine runs on a manual clock, the store's timing is tested with
@@ -159,8 +161,9 @@ by hand.
 
 - HTML is served with `max-age=0, must-revalidate`, so a deploy is visible on the next load;
   fingerprinted scripts, styles, fonts and the `.wasm` are immutable.
-- Deep links such as `/settings` get the app shell with a 200. A three-line Worker answers 404 for
-  missing assets, so a missing script never receives the HTML shell under a cacheable script URL.
+- Deep links such as `/settings` get the app shell with a 200. A Worker of a few lines answers 404
+  for missing assets, so a missing script never receives the HTML shell under a cacheable script
+  URL.
 - `npm audit` for production dependencies is a separate check that does not gate deploys, so an
   advisory published upstream cannot freeze the demo.
 
