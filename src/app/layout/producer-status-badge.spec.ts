@@ -6,9 +6,8 @@ import { PRODUCER_TRANSPORT_FACTORY } from '../market-data/producer-transport';
 import { ProducerStatusBadge } from './producer-status-badge';
 
 describe('ProducerStatusBadge', () => {
-  const events = new Subject<ProducerEvent>();
-
   function render() {
+    const events = new Subject<ProducerEvent>();
     TestBed.configureTestingModule({
       providers: [
         {
@@ -24,7 +23,7 @@ describe('ProducerStatusBadge', () => {
       await fixture.whenStable();
       return element.textContent.replace(/\s+/g, ' ').trim();
     };
-    return { store, element, read };
+    return { events, store, element, read };
   }
 
   it('is a status live region', () => {
@@ -34,7 +33,7 @@ describe('ProducerStatusBadge', () => {
   });
 
   it('follows the producer through its states', async () => {
-    const { store, read } = render();
+    const { events, store, read } = render();
 
     store.start();
     store.pause();
