@@ -1,17 +1,17 @@
-// Cloudflare serves the Angular build as static assets; the Worker script only answers 404s.
+// Cloudflare serves the Angular build as static assets. The Worker script runs only for paths that
+// match no asset: it answers app routes with the shell and missing files with 404.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "realtime-market-dashboard",
   // Not a secret: an account ID only identifies the account; the CI API token is what authorises.
   "account_id": "0a1770f87c44121d352456128d75f9ae",
   "compatibility_date": "2026-10-26",
-  "main": "cloudflare/not-found.js",
+  "main": "cloudflare/worker.js",
   "workers_dev": true,
   // Every non-main branch is uploaded as a version with a public preview URL (see ci.yml).
   "preview_urls": true,
   "assets": {
     "directory": "./dist/realtime-market-dashboard/browser",
-    // Deep links such as /settings must return the app shell with 200, not a 404 page.
-    "not_found_handling": "single-page-application",
+    "binding": "ASSETS",
   },
 }

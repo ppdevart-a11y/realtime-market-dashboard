@@ -22,19 +22,19 @@ reviewable on its own URL.
   when truncated so that two long branch names cannot share a URL.
 - **Caching.** `_headers` marks fingerprinted scripts, styles and media (fonts and the `.wasm`
   included) immutable. HTML keeps Cloudflare's default `max-age=0, must-revalidate`.
-- **Missing URLs.** Navigations to unknown paths get the app shell with a 200, so deep links work.
-  Any other request for a missing asset reaches a Worker of a few lines that answers 404
-  with `no-store`.
+- **Missing URLs.** Requests that match no asset reach a Worker of a few lines: paths without a
+  file extension are app routes and get the shell with a 200, for every client, so deep links
+  work; anything else is a missing file and gets a 404 with `no-store`.
 - **Advisories.** The audit job does not gate deploys.
 - **Routes** are loaded eagerly.
 
 ## Consequences
 
 - A push is live without manual steps, and the footer shows which commit is being served.
-- Without the 404 Worker, a missing chunk requested as a script received the HTML shell with a 200,
-  and `_headers` then made that response immutable under the script's URL. This was reproduced
-  before the Worker was added. One harmless quirk remains: a navigation, not a script request, to a
-  missing `.js` URL still receives the shell with the immutable header.
+- With Cloudflare's built-in SPA fallback instead of the Worker, a missing chunk requested as a
+  script received the HTML shell with a 200, and `_headers` then made that response immutable
+  under the script's URL; this was reproduced by hand. The fallback also served deep links only to
+  clients that send navigation hints (`Sec-Fetch-Mode`), so `curl` or a link previewer got 404.
 - An advisory published upstream on the day of the interview cannot freeze the demo; it shows up
   as a failed audit check.
 - Eager routes cost about 22 KB (gzipped) of forms code on the first load. In exchange, a tab

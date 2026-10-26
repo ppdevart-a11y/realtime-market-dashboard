@@ -161,9 +161,9 @@ by hand.
 
 - HTML is served with `max-age=0, must-revalidate`, so a deploy is visible on the next load;
   fingerprinted scripts, styles, fonts and the `.wasm` are immutable.
-- Deep links such as `/settings` get the app shell with a 200. A Worker of a few lines answers 404
-  for missing assets, so a missing script never receives the HTML shell under a cacheable script
-  URL.
+- A Worker of a few lines handles paths that match no asset: app routes such as `/settings` get
+  the app shell, for every client; missing files get a 404, so a missing script never receives the
+  HTML shell under a cacheable script URL.
 - `npm audit` for production dependencies is a separate check that does not gate deploys, so an
   advisory published upstream cannot freeze the demo.
 
