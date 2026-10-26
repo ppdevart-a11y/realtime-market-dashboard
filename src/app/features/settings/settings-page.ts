@@ -78,11 +78,11 @@ function toDraft(settings: ProducerSettings): SettingsDraft {
   };
 }
 
-/** The number each field holds, or `null` for empty or unreadable text. */
+/** The whole number each field holds, or `null` for any other text. */
 function numbersOf(draft: SettingsDraft): Record<ProducerSettingKey, number | null> {
   const read = (text: string) => {
     const parsed = readNumberText(text);
-    return parsed.kind === 'number' ? parsed.value : null;
+    return parsed.kind === 'whole' ? parsed.value : null;
   };
   return {
     instrumentCount: read(draft.instrumentCount),
@@ -97,7 +97,7 @@ function numbersOf(draft: SettingsDraft): Record<ProducerSettingKey, number | nu
  */
 function readSettings(draft: SettingsDraft): ProducerSettings | null {
   const values = numbersOf(draft);
-  return isProducerSettings(values) ? { ...values } : null;
+  return isProducerSettings(values) ? values : null;
 }
 
 /**
@@ -129,7 +129,10 @@ export class SettingsPage {
         if (text.kind === 'unreadable') {
           return { kind: 'unreadable', message: UNREADABLE_MESSAGE };
         }
-        const violation = settingViolation(key, text.kind === 'empty' ? null : text.value);
+        const violation =
+          text.kind === 'fraction'
+            ? 'integer'
+            : settingViolation(key, text.kind === 'whole' ? text.value : null);
         return violation === null
           ? null
           : {

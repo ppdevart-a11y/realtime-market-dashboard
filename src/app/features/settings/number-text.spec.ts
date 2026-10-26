@@ -7,15 +7,24 @@ describe('readNumberText', () => {
     [' 50 ', 50],
     ['12,345,678', 12_345_678],
     ['007', 7],
-    ['2.5', 2.5],
-    ['.5', 0.5],
-    ['1,000.5', 1_000.5],
-  ])('reads %j as %d', (text, value) => {
-    expect(readNumberText(text)).toEqual({ kind: 'number', value });
+  ])('reads %j as the whole number %d', (text, value) => {
+    expect(readNumberText(text)).toEqual({ kind: 'whole', value });
   });
 
   it.each(['', '   ', '\t'])('reads %j as empty', (text) => {
     expect(readNumberText(text)).toEqual({ kind: 'empty' });
+  });
+
+  it.each([
+    '2.5',
+    // A decimal point makes a fraction even when the decimals are zero.
+    '2.0',
+    '.5',
+    '1,000.5',
+    // A double would round this to exactly 50.
+    '50.00000000000000001',
+  ])('reads %j as a fraction', (text) => {
+    expect(readNumberText(text)).toEqual({ kind: 'fraction' });
   });
 
   it.each([
@@ -45,6 +54,6 @@ describe('readNumberText', () => {
   });
 
   it('reads digits beyond the range of a double as the largest double', () => {
-    expect(readNumberText('9'.repeat(400))).toEqual({ kind: 'number', value: Number.MAX_VALUE });
+    expect(readNumberText('9'.repeat(400))).toEqual({ kind: 'whole', value: Number.MAX_VALUE });
   });
 });

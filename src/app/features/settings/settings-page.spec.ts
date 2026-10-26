@@ -17,6 +17,7 @@ const smallRun: ProducerSettings = {
   batchIntervalMs: 100,
 };
 const UNREADABLE = 'Enter a whole number using digits, such as 500 or 1,000.';
+const FRACTION = 'Enter a whole number.';
 
 /**
  * Renders the page against the real store on a producer that records commands, after an optional
@@ -106,7 +107,10 @@ describe('SettingsPage', () => {
 
   it.each<[Label, string, string]>([
     ['Instrument count', '', 'Enter a value.'],
-    ['Instrument count', '2.5', 'Enter a whole number.'],
+    ['Instrument count', '2.5', FRACTION],
+    ['Instrument count', '2.0', FRACTION],
+    ['Instrument count', '.5', FRACTION],
+    ['Batch interval', '50.00000000000000001', FRACTION],
     ['Instrument count', 'five', UNREADABLE],
     ['Instrument count', '0x10', UNREADABLE],
     ['Instrument count', '0b11', UNREADABLE],
@@ -210,20 +214,22 @@ describe('SettingsPage', () => {
     expect(page.values()).toEqual(['5', '1,000', '2,000']);
   });
 
-  it.each(['0x10', '1e1', '.5e1'])(
-    'never applies %j, which Number() would read as a number',
-    async (text) => {
-      const page = await render();
+  it.each([
+    ['0x10', UNREADABLE],
+    ['1e1', UNREADABLE],
+    ['.5e1', UNREADABLE],
+    ['2.0', FRACTION],
+  ])('never applies %j, which Number() would read as a whole number', async (text, message) => {
+    const page = await render();
 
-      await page.enter('Instrument count', text);
-      await page.press('Apply settings');
+    await page.enter('Instrument count', text);
+    await page.press('Apply settings');
 
-      expect(page.errorOf('Instrument count')).toBe(`Error: ${UNREADABLE}`);
-      expect(page.store.runId()).toBe(1);
-      expect(page.store.settings()).toEqual(DEFAULT_PRODUCER_SETTINGS);
-      expect(page.sent).toEqual([{ type: 'start', runId: 1, settings: DEFAULT_PRODUCER_SETTINGS }]);
-    },
-  );
+    expect(page.errorOf('Instrument count')).toBe(`Error: ${message}`);
+    expect(page.store.runId()).toBe(1);
+    expect(page.store.settings()).toEqual(DEFAULT_PRODUCER_SETTINGS);
+    expect(page.sent).toEqual([{ type: 'start', runId: 1, settings: DEFAULT_PRODUCER_SETTINGS }]);
+  });
 
   it('on an invalid submit, reveals every error, focuses the first one and sends nothing', async () => {
     const page = await render();
