@@ -30,7 +30,10 @@
                 "input": "public"
               }
             ],
-            "styles": ["src/styles.scss"]
+            "styles": [
+              "@fontsource-variable/atkinson-hyperlegible-next/index.css",
+              "src/styles.scss"
+            ]
           },
           "configurations": {
             "production": {

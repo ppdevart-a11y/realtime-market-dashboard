@@ -4,5 +4,11 @@
     "color-no-hex": true,
     "color-named": "never",
     "max-nesting-depth": 2
-  }
+  },
+  "overrides": [
+    {
+      "files": ["src/styles/_tokens.scss"],
+      "rules": { "color-no-hex": null }
+    }
+  ]
 }

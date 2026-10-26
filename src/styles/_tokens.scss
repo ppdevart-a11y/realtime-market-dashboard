@@ -1,0 +1,43 @@
+// Design tokens. Every colour resolves per colour scheme through light-dark(); text pairs meet
+// WCAG AA (4.5:1) in both schemes. Market direction is never carried by colour alone: blue/orange
+// stays distinguishable with the common colour-vision deficiencies, and arrows and signs repeat it.
+:root {
+  color-scheme: light dark;
+
+  --color-canvas: light-dark(#f3f5f8, #0f1720);
+  --color-surface: light-dark(#fff, #16212c);
+  --color-line: light-dark(#d8dee6, #2a3846);
+  --color-ink: light-dark(#14212e, #e6edf3);
+  --color-ink-muted: light-dark(#4a5a6a, #9aa9b8);
+  --color-bid: light-dark(#1f5fbf, #7db0ff);
+  --color-ask: light-dark(#a64b14, #f2a766);
+  --color-danger: light-dark(#b42318, #ff8a80);
+  --color-focus: var(--color-bid);
+  --color-on-action: light-dark(#fff, #0f1720);
+  --color-action: var(--color-ink);
+
+  // Atkinson Hyperlegible Next separates 0/O, 1/l/I and 5/S, the confusions that matter when
+  // reading prices; tabular figures keep columns aligned while values change.
+  --font-sans: 'Atkinson Hyperlegible Next Variable', system-ui, sans-serif;
+
+  // Minor-third scale on a 16px base.
+  --text-sm: 0.8333rem;
+  --text-md: 1rem;
+  --text-lg: 1.2rem;
+  --text-xl: 1.44rem;
+
+  // Spacing on a 4px grid.
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+
+  // Radius follows hierarchy: the table panel is rounder than the controls around it.
+  --radius-control: 4px;
+  --radius-panel: 8px;
+
+  // Wide enough for the six-column table at the base size without horizontal scrolling.
+  --content-width: 72rem;
+}
