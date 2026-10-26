@@ -32,10 +32,13 @@ impl WasmMarketSimulator {
     ///
     /// # Errors
     ///
-    /// Throws an `Error` carrying the `SimError` message if `instrument_count` is outside
-    /// `1..=MAX_INSTRUMENT_COUNT`.
+    /// Throws an `Error` naming the rejected value if `instrumentCount` is outside 1 to
+    /// `maxInstrumentCount()`.
     #[wasm_bindgen(constructor)]
-    pub fn new(instrument_count: u32, seed: u64) -> Result<Self, JsError> {
+    pub fn new(
+        #[wasm_bindgen(js_name = instrumentCount)] instrument_count: u32,
+        seed: u64,
+    ) -> Result<Self, JsError> {
         Ok(Self(MarketSimulator::new(instrument_count, seed)?))
     }
 
@@ -44,8 +47,9 @@ impl WasmMarketSimulator {
     ///
     /// # Pointer contract
     ///
-    /// 1. The offset is 4-byte aligned and is followed by `size` consecutive `MarketUpdate`
-    ///    records of `UPDATE_STRIDE_WORDS` little-endian `u32` words each.
+    /// 1. The offset is 4-byte aligned and is followed by `size` consecutive records of
+    ///    `updateStrideWords()` little-endian `u32` words each, in the field order of the Rust
+    ///    `MarketUpdate`.
     /// 2. The records are valid only until the next call into any export of this module
     ///    instance. The next `generate` overwrites them, and any call may allocate and grow the
     ///    memory, which detaches every existing view (`byteLength` becomes 0) and replaces
@@ -59,8 +63,8 @@ impl WasmMarketSimulator {
     ///
     /// # Errors
     ///
-    /// Throws an `Error` carrying the `SimError` message if `size` is outside
-    /// `1..=MAX_BATCH_SIZE`; the stream is unaffected. JavaScript numbers reach `size` through
+    /// Throws an `Error` naming the rejected value if `size` is outside 1 to `maxBatchSize()`;
+    /// the stream is unaffected. JavaScript numbers reach `size` through
     /// `ToInt32`-style wrapping (`1.9` becomes 1, `2 ** 32 + 5` becomes 5), so callers must check
     /// for integers in range before calling.
     pub fn generate(&mut self, size: u32) -> Result<*const MarketUpdate, JsError> {
