@@ -22,7 +22,7 @@ tests of the model should not need a browser.
 - The price model uses only correctly rounded IEEE-754 operations: no `exp`, `ln`, `powi` or
   `mul_add`, whose precision `std` leaves unspecified. It reverts the relative deviation from an
   anchor with multiplicative steps instead of reverting the log-price; the two agree to first
-  order (`instrument.rs` documents the model and its calibration).
+  order (`instrument.rs` documents the model step by step).
 - One golden fixture, `wasm/market-sim/tests/fixtures/golden-5-42.txt`, records the first 108
   updates for a fixed seed. The Rust tests compare native output with it, and the TypeScript
   contract test compares the compiled `.wasm`, read through the production adapter, with the
@@ -38,6 +38,11 @@ tests of the model should not need a browser.
   its diff is reviewed like code.
 - The module is about 20 KB (9.7 KB gzipped). Size is guarded by the contract test (< 32 KiB);
   one `f64::clamp` once added 24 KB of float-formatting code, so the crate avoids it.
+- The parameters were calibrated by simulating the extreme settings, from one instrument at
+  20,000 updates per second for an hour to fifty instruments at the default rate: the worst
+  deviation from the anchor was about ±5 % and the price limits were never reached. One side of
+  the book was empty after about 1.3 % of updates and both sides after about 0.005 %, which the
+  dashboard shows as an unavailable imbalance.
 - Contributors need rustup and wasm-pack in addition to Node.
 
 ## Alternatives considered

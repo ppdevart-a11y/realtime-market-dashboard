@@ -15,11 +15,7 @@ import { MarketDataStore } from '../../market-data/market-data.store';
 import { NumberField } from './number-field';
 import { readNumberText } from './number-text';
 
-/**
- * The form's model: each setting as the text in its field. Converting to numbers happens here,
- * with `readNumberText`, rather than in Signal Forms, whose `Number()` reading accepts far more
- * than the hints show.
- */
+/** The form's model: each setting as the text in its field, read with `readNumberText`. */
 type SettingsDraft = Record<ProducerSettingKey, string>;
 
 const quantity = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 });

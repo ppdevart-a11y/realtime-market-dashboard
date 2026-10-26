@@ -11,12 +11,10 @@ import type { MarketSourceFactory } from './market-source';
 /**
  * Adapter from the Rust generator (`wasm/market-sim`) to the engine's `MarketSource` port.
  *
- * Batches are read in place: `generate` returns a byte offset into the module's linear memory
- * and the records are decoded from one `Uint32Array` over the whole memory, so no batch is ever
- * copied or turned into objects. That view is recreated only when the memory has grown, because
- * growth replaces `memory.buffer` and detaches views of the old one. Creating a simulator and
- * generating can both grow the memory, so the view is checked right after every `generate`,
- * immediately before the batch is read.
+ * Batches are read in place, from one `Uint32Array` over the module's memory at the byte offset
+ * `generate` returns. Memory growth replaces `memory.buffer` and detaches views of the old one;
+ * creating a simulator and generating can both grow it, so the view is checked after every
+ * `generate`, right before the batch is read.
  */
 
 /**

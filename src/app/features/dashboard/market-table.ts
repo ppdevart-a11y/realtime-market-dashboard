@@ -6,9 +6,9 @@ import { UsdCentsPipe } from '../../shared/format/usd-cents.pipe';
 import { ImbalanceMeter } from './imbalance-meter';
 
 /**
- * Live metrics, one row per instrument. A native table rather than a virtualised list: at most
- * fifty rows render cheaply, and real rows keep find-in-page and screen-reader table navigation.
- * Rows are tracked by symbol, so each frame only patches the text nodes whose values changed.
+ * Live metrics, one row per instrument, in a native table: at most 50 rows, and real rows keep
+ * find-in-page and table navigation for screen readers. Rows are tracked by symbol, so a frame
+ * patches only the text that changed.
  */
 @Component({
   selector: 'app-market-table',

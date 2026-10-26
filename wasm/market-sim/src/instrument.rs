@@ -1,8 +1,8 @@
 //! Price and order-book model of one instrument, advanced once per update of that instrument.
 //!
-//! Time is measured in trades, not seconds: activity rather than elapsed time drives price
-//! change, the standard "trade clock" view of returns (Clark 1973; Ané and Geman 2000). The
-//! generation rate therefore changes how fast prices move on screen, never how far.
+//! Trade time: the rate changes how fast prices move, never how far. Only correctly rounded
+//! IEEE-754 operations (no `exp`/`ln`/`powi`/`mul_add`, no `f64::clamp`), so native and Wasm
+//! streams are bit-identical.
 //!
 //! # One step
 //!
@@ -23,23 +23,10 @@
 //!
 //! # Relative deviation instead of log-price
 //!
-//! A textbook Ornstein–Uhlenbeck price reverts `ln(mid / anchor)`. Here `x = mid / anchor − 1`
-//! with multiplicative steps plays that role: `ln(1 + x) = x − x²/2 + …`, so both agree to first
-//! order and differ by less than 2.5 % of `x` within the ±5 % range the price actually explores.
-//! What this buys is determinism: `exp` and `ln` are library calls whose precision `std`
-//! documents as unspecified, so their results may differ between platforms. This module uses only
-//! correctly rounded IEEE-754 operations (`+ − × ÷`, comparisons, `min`/`max`, integer
-//! conversions) and no fused multiply-add, so native and Wasm builds produce bit-identical
-//! streams and one golden fixture checks both. It also avoids `f64::clamp`, whose panic message
-//! formats floats and would link about 24 KB of float-printing code into the module.
-//!
-//! # Calibration
-//!
-//! The parameters were checked by simulating the extreme settings, from one instrument at
-//! 20 000 updates per second for an hour to fifty instruments at the default rate. The worst
-//! deviation from the anchor was about ±5 % and the rail was never reached. One side of the book
-//! was empty after about 1.3 % of updates and both sides after about 0.005 %, which shows up on
-//! the dashboard as an unavailable imbalance, as specified for a zero denominator.
+//! A textbook Ornstein–Uhlenbeck price reverts `ln(mid / anchor)`; here `x = mid / anchor − 1`
+//! with multiplicative steps does, which needs no `exp` or `ln` (their precision `std` leaves
+//! unspecified). `ln(1 + x) = x − x²/2 + …`, so both agree to first order and differ by less than
+//! 2.5 % of `x` within the ±5 % range the price explores.
 
 use core::num::NonZeroU32;
 
@@ -52,11 +39,8 @@ const MEAN_REVERSION: f64 = 5e-4;
 /// deviation settles to a standard deviation of `σ / √(2θ − θ²) ≈ 0.95 %`.
 const VOLATILITY: f64 = 3e-4;
 
-/// Drift per step at full book imbalance (κ), as a fraction of the mid: 0.2 basis points.
-///
-/// Buying empties the ask, the imbalance turns positive and the price edges up. The measured
-/// correlation between imbalance and the next return is about +0.02: visible in aggregate,
-/// invisible tick by tick.
+/// Drift per step at full book imbalance (κ), as a fraction of the mid: 0.2 basis points. The
+/// measured correlation between imbalance and the next return is about +0.02.
 const IMBALANCE_DRIFT: f64 = 2e-5;
 
 /// Lower limit of the mid relative to the anchor.
@@ -72,9 +56,8 @@ const MAX_MID_TO_ANCHOR: f64 = 1.25;
 /// Cheapest anchor price, in cents ($10).
 const MIN_ANCHOR_CENTS: f64 = 1_000.0;
 
-/// Width of the anchor range, in cents, so anchors span $10 to $500. Squaring the uniform draw
-/// skews it towards cheaper instruments (median about $132), whose spreads then sit at the
-/// 1-cent tick as they do in real markets.
+/// Width of the anchor range, in cents, so anchors span $10 to $500. The uniform draw is squared,
+/// which puts the median near $132 and the cheapest instruments' spreads at the 1-cent floor.
 const ANCHOR_SPAN_CENTS: f64 = 49_000.0;
 
 /// Narrowest base spread, in basis points of the mid.
@@ -210,6 +193,7 @@ impl Instrument {
         let deviation = self.mid_cents / self.anchor_cents - 1.0;
         let change =
             -MEAN_REVERSION * deviation + VOLATILITY * unit_bell(rng) + IMBALANCE_DRIFT * imbalance;
+        // `max`/`min` rather than `f64::clamp`, whose panic message links ~24 KB of float formatting.
         self.mid_cents = (self.mid_cents * (1.0 + change))
             .max(self.anchor_cents * MIN_MID_TO_ANCHOR)
             .min(self.anchor_cents * MAX_MID_TO_ANCHOR);

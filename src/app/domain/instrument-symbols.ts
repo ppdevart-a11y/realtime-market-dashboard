@@ -1,11 +1,6 @@
 /**
- * Directory of fictional instrument symbols. The generator identifies instruments by index (like
- * the locate codes of binary exchange feeds); this module maps an index to a stable, readable
- * ticker, so a run's rows can be labelled before its first update arrives.
- *
- * Symbols are consonant–vowel–consonant–vowel words: pronounceable, unlike random letters, and
- * plentiful (20 × 5 × 20 × 5 = 10,000 before exclusions). Q is left out as it reads poorly
- * without a U. Raising the instrument limit needs no change here.
+ * Maps an instrument index to a stable four-letter ticker: consonant–vowel–consonant–vowel, no Q,
+ * 10,000 words before exclusions. ALFA and BETA lead; the list is prefix-stable.
  */
 
 const CONSONANTS = 'BCDFGHJKLMNPRSTVWXYZ';

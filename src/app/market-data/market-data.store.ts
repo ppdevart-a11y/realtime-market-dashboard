@@ -57,16 +57,8 @@ const UNAVAILABLE: InstrumentSnapshot = {
 };
 
 /**
- * Application-wide state of the market data producer: the active run, its settings, its status
- * and the latest metrics per instrument.
- *
- * A root service, so the run outlives navigation and exactly one producer exists per app. Every
- * run gets a new id; events are read through a per-run projection (`switchMap`), so anything
- * still queued from a replaced run — including a snapshot already waiting for an animation
- * frame — is discarded instead of overwriting the new run.
- *
- * Pause and resume take effect in the UI immediately: commands reach the producer in order, and
- * the only way one could be lost is the producer dying, which is reported as an error anyway.
+ * Root service: one producer per app, surviving navigation. Events are read per run (`switchMap`),
+ * so nothing from a replaced run, including a snapshot waiting for a frame, reaches state.
  */
 @Service()
 export class MarketDataStore {
