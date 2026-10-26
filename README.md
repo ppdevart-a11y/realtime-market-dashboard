@@ -159,11 +159,12 @@ RxJS marble tests (animation frames included), and the components run zoneless.
 ## Deployment
 
 GitHub Actions runs on every push: a build job, a test job (type-checking, Vitest, the Rust
-tests and the Worker's routing tests) and a lint job (Prettier, ESLint, Stylelint, rustfmt and Clippy for native and wasm32).
-Once the build and the tests pass, the build is published to Cloudflare Workers static assets:
-`main` with `wrangler deploy`, any other branch as a version with a public preview at
-`https://b-<branch>-realtime-market-dashboard.ppdevart.workers.dev` (lowercase, non-alphanumerics
-replaced by dashes; the run summary prints the exact URL). Nothing is deployed by hand.
+tests and the Worker's routing tests) and a lint job (Prettier, ESLint, Stylelint, rustfmt and
+Clippy for native and wasm32). Once the build and the tests pass, the build is published to
+Cloudflare Workers static assets: `main` with `wrangler deploy`, any other branch as a version with
+a public preview at `https://b-<branch>-realtime-market-dashboard.ppdevart.workers.dev`
+(lowercase, non-alphanumerics replaced by dashes; the run summary prints the exact URL). Nothing is
+deployed by hand.
 
 Lint does not hold a deploy back: a formatting slip in a change pushed during a demo should not keep
 the old version online, while a failing test should. The lint result still shows on the commit.
