@@ -12,11 +12,11 @@ reviewable on its own URL.
 
 - **CI.** GitHub Actions runs on every push, with actions pinned by commit SHA:
   - a build job: the Wasm module and the production build stamped with the commit SHA;
-  - a checks job: formatting, lint, type-check, tests with coverage;
-  - a Rust job: rustfmt, Clippy for the native and wasm32 targets, tests;
+  - a test job: type-checking, the Vitest suite with coverage, and the Rust tests;
+  - a lint job: Prettier, ESLint, Stylelint, rustfmt, Clippy for the native and wasm32 targets;
   - an audit job;
-  - a deploy job that needs only the build job. The checks report on the same commit but do not
-    hold the deploy back.
+  - a deploy job that needs the build and test jobs. Lint and audit report on the same commit but
+    do not hold the deploy back.
 - **Deployment.** The build is published as Cloudflare Workers static assets. `main` deploys to
   production with `wrangler deploy`. Any other branch is uploaded as a version with a preview
   alias derived from the branch name: lowercase, at most 37 characters, ending in a short hash
@@ -50,8 +50,9 @@ reviewable on its own URL.
   would need rustup and wasm-pack, and the deploy would not wait for the Rust job.
 - **Gating deploys on the audit.** Safer in a product; for a demo whose production dependencies
   are mostly the framework, it would turn someone else's advisory into a frozen demo.
-- **Gating deploys on the checks.** The usual choice, and the first version of this pipeline. It
-  meant a change pushed during the interview with one unformatted line or a pedantic lint would
-  leave the old version online without anyone noticing. In a team repository, branch protection
-  on `main` restores the gate without coupling it to deployment.
+- **Gating deploys on every check, lint included.** The usual choice, and the first version of
+  this pipeline. A change pushed during the interview with one unformatted line would have left the
+  old version online without anyone noticing.
+- **Gating deploys on the build alone.** Tried next; it let a failing test go live. A behaviour
+  regression should stop a deploy; formatting should not.
 - **Lazy routes.** A smaller first load; see the trade-off above.
