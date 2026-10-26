@@ -1,0 +1,94 @@
+.scroller {
+  overflow-x: auto;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface);
+}
+
+table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+// Fixed widths in character units keep columns still while values change.
+.col-symbol {
+  inline-size: 8ch;
+}
+
+.col-price {
+  inline-size: 14ch;
+}
+
+.col-spread {
+  inline-size: 10ch;
+}
+
+.col-volume {
+  inline-size: 14ch;
+}
+
+.col-imbalance {
+  inline-size: 18ch;
+}
+
+th,
+td {
+  padding: var(--space-2) var(--space-4);
+  border-block-end: 1px solid var(--color-line);
+  text-align: start;
+  white-space: nowrap;
+}
+
+thead th {
+  position: sticky;
+  inset-block-start: 0;
+  background: var(--color-surface);
+  color: var(--color-ink-muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+tbody tr:last-child > * {
+  border-block-end: 0;
+}
+
+// The symbol column stays in view when the table scrolls sideways on narrow screens.
+tbody th {
+  position: sticky;
+  inset-inline-start: 0;
+  background: var(--color-surface);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.numeric {
+  text-align: end;
+}
+
+.unavailable {
+  color: var(--color-ink-muted);
+}
+
+.tick {
+  margin-inline-end: var(--space-1);
+  font-size: var(--text-sm);
+}
+
+.up {
+  color: var(--color-bid);
+}
+
+.down {
+  color: var(--color-ask);
+}
+
+.imbalance {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.imbalance-value {
+  min-inline-size: 5ch;
+}

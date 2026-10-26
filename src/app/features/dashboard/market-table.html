@@ -1,0 +1,81 @@
+<ng-template #unavailable>
+  <span class="unavailable" aria-hidden="true">—</span>
+  <span class="visually-hidden">Not available</span>
+</ng-template>
+
+<div class="scroller" role="region" aria-labelledby="market-table-caption" tabindex="0">
+  <table>
+    <caption id="market-table-caption" class="visually-hidden">
+      Live metrics per instrument
+    </caption>
+    <colgroup>
+      <col class="col-symbol" />
+      <col class="col-price" />
+      <col class="col-spread" />
+      <col class="col-volume" />
+      <col class="col-price" />
+      <col class="col-imbalance" />
+    </colgroup>
+    <thead>
+      <tr>
+        <th scope="col">Symbol</th>
+        <th scope="col" class="numeric">Last price</th>
+        <th scope="col" class="numeric">Spread</th>
+        <th scope="col" class="numeric">Volume</th>
+        <th scope="col" class="numeric">VWAP</th>
+        <th scope="col" class="numeric">Order-book imbalance</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (row of rows(); track row.symbol) {
+        <tr>
+          <th scope="row">{{ row.symbol }}</th>
+          <td class="numeric">
+            @switch (row.lastTick) {
+              @case ('up') {
+                <span class="tick up" aria-hidden="true">▲</span>
+                <span class="visually-hidden">Up</span>
+              }
+              @case ('down') {
+                <span class="tick down" aria-hidden="true">▼</span>
+                <span class="visually-hidden">Down</span>
+              }
+            }
+            @if (row.lastPriceCents | usdCents; as price) {
+              {{ price }}
+            } @else {
+              <ng-container [ngTemplateOutlet]="unavailable" />
+            }
+          </td>
+          <td class="numeric">
+            @if (row.spreadCents | usdCents; as spread) {
+              {{ spread }}
+            } @else {
+              <ng-container [ngTemplateOutlet]="unavailable" />
+            }
+          </td>
+          <td class="numeric">{{ row.volume | number }}</td>
+          <td class="numeric">
+            @if (row.vwapCents | usdCents; as vwap) {
+              {{ vwap }}
+            } @else {
+              <ng-container [ngTemplateOutlet]="unavailable" />
+            }
+          </td>
+          <td class="numeric">
+            <span class="imbalance">
+              <app-imbalance-meter [value]="row.imbalance" />
+              @if (row.imbalance | imbalance; as imbalance) {
+                <span class="imbalance-value">{{ imbalance }}</span>
+              } @else {
+                <span class="imbalance-value">
+                  <ng-container [ngTemplateOutlet]="unavailable" />
+                </span>
+              }
+            </span>
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
