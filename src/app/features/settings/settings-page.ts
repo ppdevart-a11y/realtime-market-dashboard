@@ -183,11 +183,16 @@ export class SettingsPage {
       this.#focusFirstInvalidField();
       return;
     }
+    const previousRunId = this.#store.runId();
     this.#store.apply(settings);
     // Shows the values as the hints print them, and clears touched state for the next edit.
     this.settingsForm().reset(toDraft(settings));
-    // The worker has not confirmed the run yet; the status badge announces when it is running.
-    this.announcement.set(`Settings applied. Run ${this.#store.runId()} is starting.`);
+    // The worker has not confirmed the run yet; the status badge announces when it is running. No
+    // new run means no producer could be created, which the failure notice reports instead.
+    const runId = this.#store.runId();
+    this.announcement.set(
+      runId > previousRunId ? `Settings applied. Run ${runId} is starting.` : '',
+    );
   }
 
   #focusFirstInvalidField(): void {

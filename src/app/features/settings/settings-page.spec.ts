@@ -21,9 +21,13 @@ const FRACTION = 'Enter a whole number.';
 
 /**
  * Renders the page against the real store on a producer that records commands, after an optional
- * `before` step that shapes the active run (the page reads it on entry).
+ * `before` step that shapes the active run (the page reads it on entry). With
+ * `producerUnavailable`, creating a producer throws, as in a browser without Web Workers.
  */
-async function render(before: (store: MarketDataStore) => void = () => undefined) {
+async function render(
+  before: (store: MarketDataStore) => void = () => undefined,
+  { producerUnavailable = false } = {},
+) {
   const sent: ProducerCommand[] = [];
   const transport: ProducerTransport = {
     events$: NEVER,
@@ -31,7 +35,17 @@ async function render(before: (store: MarketDataStore) => void = () => undefined
     dispose: () => undefined,
   };
   TestBed.configureTestingModule({
-    providers: [{ provide: PRODUCER_TRANSPORT_FACTORY, useValue: () => transport }],
+    providers: [
+      {
+        provide: PRODUCER_TRANSPORT_FACTORY,
+        useValue: () => {
+          if (producerUnavailable) {
+            throw new Error('This browser cannot run Web Workers.');
+          }
+          return transport;
+        },
+      },
+    ],
   });
   const store = TestBed.inject(MarketDataStore);
   store.start();
@@ -229,6 +243,19 @@ describe('SettingsPage', () => {
     expect(page.store.runId()).toBe(1);
     expect(page.store.settings()).toEqual(DEFAULT_PRODUCER_SETTINGS);
     expect(page.sent).toEqual([{ type: 'start', runId: 1, settings: DEFAULT_PRODUCER_SETTINGS }]);
+  });
+
+  it('announces nothing when no producer could be created for the new run', async () => {
+    const page = await render(undefined, { producerUnavailable: true });
+
+    await page.press('Apply settings');
+
+    expect(page.store.runId()).toBe(0);
+    expect(page.store.status()).toEqual({
+      kind: 'error',
+      message: 'This browser cannot run Web Workers.',
+    });
+    expect(page.confirmation()).toBe('');
   });
 
   it('on an invalid submit, reveals every error, focuses the first one and sends nothing', async () => {
