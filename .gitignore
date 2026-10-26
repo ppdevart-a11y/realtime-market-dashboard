@@ -45,3 +45,6 @@ Thumbs.db
 
 # Wrangler local state
 .wrangler/
+
+# Rust
+/wasm/market-sim/target

@@ -1,0 +1,19 @@
+[package]
+name = "market-sim"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99"
+description = "Simulated market data for the realtime dashboard, generated in WebAssembly."
+publish = false
+
+[lib]
+# cdylib is what wasm-pack turns into the .wasm module; rlib lets native `cargo test` and the
+# integration tests link the same code.
+crate-type = ["cdylib", "rlib"]
+
+[lints.rust]
+missing_docs = "deny"
+unsafe_code = "deny"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }

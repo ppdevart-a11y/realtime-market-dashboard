@@ -1,0 +1,7 @@
+# One toolchain for local builds, CI and wasm-pack. It sits at the repository root because rustup
+# resolves it from the current directory, not from `cargo --manifest-path`.
+[toolchain]
+channel = "1.99.1"
+components = ["clippy", "rustfmt"]
+targets = ["wasm32-unknown-unknown"]
+profile = "minimal"
