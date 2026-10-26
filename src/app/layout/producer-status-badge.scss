@@ -22,7 +22,7 @@
 }
 
 :host([data-state='running']) .dot {
-  background: var(--color-bid);
+  background: var(--color-live);
   animation: live 1.6s ease-in-out infinite;
 }
 

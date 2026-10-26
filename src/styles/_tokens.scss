@@ -13,6 +13,11 @@
   --color-ask: light-dark(#a64b14, #f2a766);
   --color-danger: light-dark(#b42318, #ff8a80);
   --color-focus: var(--color-bid);
+
+  // Roles mapped onto the palette, so a role can change colour without hunting for its uses.
+  --color-up: var(--color-bid);
+  --color-down: var(--color-ask);
+  --color-live: var(--color-bid);
   --color-on-action: light-dark(#fff, #0f1720);
   --color-action: var(--color-ink);
 

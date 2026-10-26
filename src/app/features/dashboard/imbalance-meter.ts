@@ -3,7 +3,8 @@ import { Component, computed, input } from '@angular/core';
 /**
  * A diverging bar centred on zero: bid-heavy books extend right in the bid colour, ask-heavy
  * books extend left in the ask colour. Decorative only; the numeric value next to it carries the
- * information for assistive technology. Drawn with a transform, so updates stay on the compositor.
+ * information for assistive technology. An update changes one custom property, which restyles this
+ * element and scales the bar with a transform; it never triggers layout.
  */
 @Component({
   selector: 'app-imbalance-meter',

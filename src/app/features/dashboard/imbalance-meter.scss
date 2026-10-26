@@ -1,3 +1,5 @@
+// Physical sides on purpose: bids are drawn right of zero and asks left of it, as on a depth chart,
+// whatever the writing direction.
 :host {
   position: relative;
   display: inline-block;
@@ -12,7 +14,7 @@
 :host::after {
   position: absolute;
   inset-block: -0.125rem;
-  inset-inline-start: 50%;
+  left: 50%;
   inline-size: 1px;
   background: var(--color-ink-muted);
   content: '';
@@ -21,7 +23,7 @@
 .fill {
   position: absolute;
   inset-block: 0;
-  inset-inline-start: 50%;
+  left: 50%;
   inline-size: 50%;
   border-radius: 0 var(--radius-control) var(--radius-control) 0;
   background: var(--color-bid);
@@ -30,7 +32,8 @@
 }
 
 :host(.ask-heavy) .fill {
-  inset-inline: auto 50%;
+  right: 50%;
+  left: auto;
   border-radius: var(--radius-control) 0 0 var(--radius-control);
   background: var(--color-ask);
   transform-origin: right center;

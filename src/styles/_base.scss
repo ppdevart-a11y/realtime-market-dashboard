@@ -41,6 +41,34 @@ input {
   outline: none;
 }
 
+// Buttons share one shape; a variant class picks the emphasis.
+.button {
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.button-primary {
+  background: var(--color-action);
+  color: var(--color-on-action);
+}
+
+.button-primary:hover {
+  background: color-mix(in oklab, var(--color-action) 82%, var(--color-canvas));
+}
+
+.button-secondary {
+  border-color: var(--color-control-border);
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
+
+.button-secondary:hover {
+  background: var(--color-canvas);
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;
