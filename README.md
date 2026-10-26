@@ -53,6 +53,9 @@ and in the UI, and the worker program is type-checked against the WebWorker libr
 
 ## Decisions and why
 
+Each decision is recorded with its context, consequences and rejected alternatives in
+[`docs/adr`](docs/adr/README.md).
+
 **Rust for the generator.** The assignment requires randomness and price logic to really run in
 Wasm. Rust gives a small module (about 20 KB, 9.7 KB gzipped) with no runtime, and native unit
 tests for the model. The RNG is a line-by-line port of the PCG32 reference, checked against its
