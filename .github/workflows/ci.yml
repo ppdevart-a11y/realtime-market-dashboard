@@ -10,6 +10,42 @@ permissions:
   contents: read
 
 jobs:
+  rust:
+    name: Rust
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-rust
+      cancel-in-progress: true
+    # rustup still finds rust-toolchain.toml at the root: it searches upwards from this directory.
+    defaults:
+      run:
+        working-directory: wasm/market-sim
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Without arguments, rustup installs the toolchain, components and target that
+      # rust-toolchain.toml pins.
+      - name: Install Rust
+        run: rustup toolchain install
+
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          workspaces: wasm/market-sim
+
+      - name: Check formatting
+        run: cargo fmt --check
+
+      - name: Clippy
+        run: cargo clippy --all-targets --locked -- -D warnings
+
+      # The bindings compile natively too, but the shipped module is wasm32.
+      - name: Clippy (wasm32)
+        run: cargo clippy --target wasm32-unknown-unknown --locked -- -D warnings
+
+      - name: Test
+        run: cargo test --locked
+
   web:
     name: Web
     runs-on: ubuntu-latest
@@ -26,7 +62,26 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
 
+      - name: Install Rust
+        run: rustup toolchain install
+
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          workspaces: wasm/market-sim
+          # wasm-pack downloads the matching wasm-bindgen CLI and binaryen here.
+          cache-directories: ~/.cache/.wasm-pack
+
+      - uses: taiki-e/install-action@1e29709c0ec63babbe8f266397a465f29a825f91 # v2.87.31
+        with:
+          tool: wasm-pack@0.15.0
+
       - run: npm ci
+
+      # The pre-hooks of later scripts rebuild it too; this step makes Wasm failures and timing
+      # visible on their own.
+      - name: Build the Wasm generator
+        run: npm run wasm:build
+
       - run: npm run format:check
       - run: npm run lint
       - run: npm run typecheck
@@ -66,7 +121,7 @@ jobs:
 
   deploy:
     name: Deploy
-    needs: [web]
+    needs: [rust, web]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     # Deploys queue instead of cancelling so a half-finished upload never races a newer one.
