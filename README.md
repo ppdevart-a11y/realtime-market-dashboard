@@ -66,8 +66,9 @@ the Rust tests and by the TypeScript contract test against the compiled module.
 **The price model** pulls each instrument's price back towards its own anchor with small random
 steps, in trade time (activity drives price change, not wall-clock time), and keeps a two-sided book
 whose quantities revert to a typical depth. Every trade executes at that update's bid or ask,
-against a side that displays quantity; the reported book is the state after the trade. Calibration,
-invariants and why `exp`/`ln` are avoided are documented in `wasm/market-sim/src/instrument.rs`.
+against a side that displays quantity; the reported book is the state after the trade. The model
+is documented step by step in `wasm/market-sim/src/instrument.rs`, its calibration in
+[ADR 1](docs/adr/0001-deterministic-rust-generator.md).
 
 **Batches are read in place.** `generate` fills a buffer allocated once per simulator and returns
 its address; the worker decodes records straight from a `Uint32Array` over Wasm memory. No batch is
