@@ -175,6 +175,23 @@ describe('MarketAggregator', () => {
     expect(aggregator.snapshot()[0]).toMatchObject({ lastPriceCents: 10_000, volume: 2 });
   });
 
+  it('rejects a malformed batch window before reading anything', () => {
+    const aggregator = new MarketAggregator(1);
+    const records = encode({ instrument: 0, priceCents: 10_000, tradeQuantity: 2, ...quote });
+
+    for (const [offset, count] of [
+      [0, -1],
+      [0, 2],
+      [0.5, 1],
+      [-7, 1],
+    ]) {
+      expect(() => {
+        aggregator.applyBatch(records, offset, count);
+      }).toThrow(RangeError);
+    }
+    expect(aggregator.totalUpdates).toBe(0);
+  });
+
   it('rejects a batch that names an unknown instrument without applying any of it', () => {
     const aggregator = new MarketAggregator(2);
     const records = encode(

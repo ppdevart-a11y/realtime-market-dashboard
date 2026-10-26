@@ -65,11 +65,13 @@ export class MarketAggregator {
    * so every value is copied out here and the array itself is never retained. The batch is
    * validated before anything is applied: it is applied entirely or not at all.
    *
-   * @throws {RangeError} if the window exceeds `records` or a record names an unknown instrument.
+   * @throws {RangeError} if the window is malformed or exceeds `records`, or a record names an
+   *   unknown instrument.
    */
   applyBatch(records: Uint32Array, offset: number, count: number): void {
     const end = offset + count * MARKET_UPDATE_WORDS;
-    if (offset < 0 || end > records.length) {
+    const wellFormed = Number.isInteger(offset) && Number.isInteger(count) && offset >= 0;
+    if (!wellFormed || count < 0 || end > records.length) {
       throw new RangeError(`Batch [${offset}, ${end}) exceeds the ${records.length}-word buffer`);
     }
     for (let at = offset; at < end; at += MARKET_UPDATE_WORDS) {
