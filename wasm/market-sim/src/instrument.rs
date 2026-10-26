@@ -32,7 +32,7 @@ use core::num::NonZeroU32;
 
 use crate::{MarketUpdate, Pcg32};
 
-/// Mean reversion per step (θ): a deviation from the anchor halves in `ln 2 / θ ≈ 1 386` steps.
+/// Mean reversion per step (θ): a deviation from the anchor halves in `ln 2 / θ ≈ 1,386` steps.
 const MEAN_REVERSION: f64 = 5e-4;
 
 /// Scale of the random part of a step (σ) as a fraction of the mid: 3 basis points. The
@@ -46,8 +46,8 @@ const IMBALANCE_DRIFT: f64 = 2e-5;
 /// Lower limit of the mid relative to the anchor.
 ///
 /// Both limits sit about 26 stationary standard deviations away and were never reached in
-/// simulation. They exist to make price bounds provable: every price stays between $7.50 and
-/// $625, far from the 1-cent floor and from integer overflow.
+/// simulation. They exist to make price bounds provable: every mid stays between $7.50 and $625,
+/// and every quote within half a spread of it, far from the 1-cent floor and from integer overflow.
 const MIN_MID_TO_ANCHOR: f64 = 0.75;
 
 /// Upper limit of the mid relative to the anchor; see [`MIN_MID_TO_ANCHOR`].
@@ -78,7 +78,7 @@ const DEPTH_CHOICES: NonZeroU32 = NonZeroU32::new(1_801).unwrap();
 const BOOK_REVERSION_DIVISOR: i64 = 8;
 
 /// Upper bound of a displayed quantity, a hard limit that simulation never reached (observed
-/// quantities stayed below 4 500).
+/// quantities stayed below 4,500).
 pub const MAX_BOOK_QUANTITY: u32 = 10_000;
 
 /// Largest single trade.
