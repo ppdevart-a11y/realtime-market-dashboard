@@ -1,3 +1,12 @@
+# Security headers for every response served from the assets.
+# - script-src: only our own bundles; 'wasm-unsafe-eval' lets the worker compile the generator.
+# - style-src 'unsafe-inline': Angular adds component styles as <style> elements at runtime.
+# - Critical CSS inlining is off in angular.json, so index.html holds no inline script to allow.
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src 'self'; worker-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+
 # Angular fingerprints scripts, styles and media with content hashes, so they never change in place.
 # Everything else (index.html) keeps Cloudflare's default "max-age=0, must-revalidate", which is
 # what lets a push show up in the live demo immediately.
