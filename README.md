@@ -180,7 +180,8 @@ Measured on the production build at the maximum settings (50 instruments, 1,000 
 | JavaScript heap (main thread) | 6 MB                                             |
 | Generator                     | about 25 µs per 1,000-update batch in Wasm       |
 
-Payloads, gzipped: application 104 KB, worker 3.4 KB, Wasm module 9.7 KB, styles 1.1 KB.
+Payloads, gzipped: application 104 KB, worker 3.4 KB, Wasm module 9.7 KB, styles 1.1 KB. The
+variable font adds 34 KB of WOFF2 for Latin text (Latin Extended, 19 KB, loads only when needed).
 
 ## Trade-offs and known limits
 
@@ -196,6 +197,7 @@ Payloads, gzipped: application 104 KB, worker 3.4 KB, Wasm module 9.7 KB, styles
 
 - Move snapshots to a `SharedArrayBuffer` ring buffer to drop the per-batch `postMessage` (needs
   cross-origin isolation headers).
-- Credit-based backpressure, so the worker never produces faster than the UI consumes.
+- Coalesce snapshots in the worker while the main thread lags, so a long stall on the page cannot
+  queue up messages (they are cumulative, so only the latest matters).
 - Row virtualisation or a canvas grid if the instrument count grew into the hundreds.
 - Browser end-to-end tests in CI against each preview URL.
